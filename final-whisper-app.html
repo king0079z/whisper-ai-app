@@ -1426,6 +1426,36 @@
                     <button class="action-btn" onclick="resetApp()">
                         <span>🔄</span> New
                     </button>
+                </div>
+                    
+                    <!-- AI Lecture Notes Button -->
+                    <div class="action-grid" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(99, 102, 241, 0.2);">
+                        <button class="action-btn" onclick="generateLectureNotes()" style="grid-column: 1 / -1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: 600;">
+                            <span>🤖</span> Generate AI Lecture Notes
+                        </button>
+            </div>
+        </div>
+                
+                <!-- Lecture Notes Display -->
+                <div class="result-wrapper" id="lectureNotesWrapper" style="display: none; margin-top: 20px;">
+                    <div class="result-header">
+                        <span>📚 AI-Generated Lecture Notes</span>
+                        <div class="result-meta">
+                            <span class="meta-badge" id="notesWordCount">0 words</span>
+    </div>
+                    </div>
+                    <div class="result-text-box" id="lectureNotesBox" style="white-space: pre-wrap; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;"></div>
+                    
+                    <div class="action-grid">
+                        <button class="action-btn" onclick="copyLectureNotes()">
+                            <span>📋</span> Copy Notes
+                        </button>
+                        <button class="action-btn" onclick="downloadLectureNotes()">
+                            <span>💾</span> Download Notes
+                        </button>
+                        <button class="action-btn" onclick="shareLectureNotes()">
+                            <span>📤</span> Share Notes
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1657,6 +1687,13 @@
         let keepAliveInterval = null;
         let connectionAttempts = 0;
         let isServerConnected = false;
+        let currentSessionId = null;
+        let currentLectureNotes = null;
+        
+        // Chunked upload settings
+        const CHUNK_SIZE_MB = 25; // 25MB chunks
+        const CHUNK_SIZE_BYTES = CHUNK_SIZE_MB * 1024 * 1024;
+        const LARGE_FILE_THRESHOLD = 100 * 1024 * 1024; // 100MB
 
         // Initialize PWA Manifest
         function setupManifest() {
@@ -2067,6 +2104,12 @@ Click OK to open Settings, or Cancel to retry later.`;
                 return;
             }
 
+            // Check if file is large - use chunked upload
+            if (selectedFile.size > LARGE_FILE_THRESHOLD) {
+                showToast('🔄 Large file detected! Using chunked upload for reliability', 'info');
+                return await startChunkedTranscription();
+            }
+
             const progressWrapper = document.getElementById('progressWrapper');
             const transcribeBtn = document.getElementById('transcribeBtn');
             const btnText = document.getElementById('transcribeBtnText');
@@ -2333,13 +2376,331 @@ Click OK to open Settings, or Cancel to retry later.`;
         function resetApp() {
             selectedFile = null;
             currentTranscript = null;
+            currentSessionId = null;
+            currentLectureNotes = null;
             document.getElementById('fileInput').value = '';
             document.getElementById('fileInfo').style.display = 'none';
             document.getElementById('resultWrapper').style.display = 'none';
             document.getElementById('progressWrapper').style.display = 'none';
+            document.getElementById('lectureNotesWrapper').style.display = 'none';
             document.getElementById('transcribeBtn').disabled = true;
             document.getElementById('transcribeBtnText').innerHTML = '🚀 Start Transcription';
             showToast('Ready for new transcription', 'success');
+        }
+        
+        // ====================
+        // CHUNKED TRANSCRIPTION FOR LARGE FILES
+        // ====================
+        
+        async function startChunkedTranscription() {
+            const progressWrapper = document.getElementById('progressWrapper');
+            const transcribeBtn = document.getElementById('transcribeBtn');
+            const btnText = document.getElementById('transcribeBtnText');
+            const bgIndicator = document.getElementById('bgProcessIndicator');
+            
+            // Acquire wake lock if background mode enabled
+            if (backgroundMode) {
+                await requestWakeLock();
+                bgIndicator.classList.add('active');
+            }
+            
+            // Show progress
+            progressWrapper.style.display = 'block';
+            transcribeBtn.disabled = true;
+            btnText.innerHTML = '<span class="spinner"></span> Processing Large File...';
+            
+            try {
+                updateProgress(5, 'Initializing chunked upload...');
+                
+                // Calculate number of chunks
+                const totalChunks = Math.ceil(selectedFile.size / CHUNK_SIZE_BYTES);
+                console.log(`📦 File will be split into ${totalChunks} chunks of ${CHUNK_SIZE_MB}MB`);
+                
+                // Step 1: Start chunked upload session
+                updateProgress(10, `Preparing ${totalChunks} chunks...`);
+                const sessionResponse = await fetch(`${colabEndpoint}/start-chunked-upload`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filename: selectedFile.name,
+                        fileSize: selectedFile.size,
+                        totalChunks: totalChunks
+                    })
+                });
+                
+                if (!sessionResponse.ok) {
+                    throw new Error('Failed to start chunked upload session');
+                }
+                
+                const sessionData = await sessionResponse.json();
+                currentSessionId = sessionData.session_id;
+                console.log(`✅ Session started: ${currentSessionId}`);
+                
+                // Step 2: Upload and transcribe chunks
+                let uploadedChunks = 0;
+                let transcribedChunks = 0;
+                
+                for (let i = 0; i < totalChunks; i++) {
+                    const start = i * CHUNK_SIZE_BYTES;
+                    const end = Math.min(start + CHUNK_SIZE_BYTES, selectedFile.size);
+                    const chunk = selectedFile.slice(start, end);
+                    
+                    // Upload chunk
+                    updateProgress(
+                        10 + (i / totalChunks) * 40,
+                        `Uploading chunk ${i + 1}/${totalChunks}...`
+                    );
+                    
+                    const chunkFormData = new FormData();
+                    chunkFormData.append('chunk', chunk);
+                    chunkFormData.append('session_id', currentSessionId);
+                    chunkFormData.append('chunk_index', i);
+                    
+                    try {
+                        const uploadResponse = await fetch(`${colabEndpoint}/upload-chunk`, {
+                            method: 'POST',
+                            body: chunkFormData
+                        });
+                        
+                        if (!uploadResponse.ok) {
+                            throw new Error(`Failed to upload chunk ${i}`);
+                        }
+                        
+                        uploadedChunks++;
+                        console.log(`✅ Uploaded chunk ${i + 1}/${totalChunks}`);
+                        
+                        // Transcribe chunk immediately after upload
+                        updateProgress(
+                            50 + (i / totalChunks) * 40,
+                            `Transcribing chunk ${i + 1}/${totalChunks}...`
+                        );
+                        
+                        const transcribeResponse = await fetch(`${colabEndpoint}/transcribe-chunk`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                session_id: currentSessionId,
+                                chunk_index: i,
+                                language: language
+                            })
+                        });
+                        
+                        if (!transcribeResponse.ok) {
+                            throw new Error(`Failed to transcribe chunk ${i}`);
+                        }
+                        
+                        const transcribeData = await transcribeResponse.json();
+                        transcribedChunks++;
+                        console.log(`✅ Transcribed chunk ${i + 1}/${totalChunks}`);
+                        
+                        // Show chunk transcript preview
+                        if (transcribeData.transcript) {
+                            const preview = transcribeData.transcript.substring(0, 50);
+                            console.log(`📝 Chunk ${i + 1} preview: "${preview}..."`);
+                        }
+                        
+                    } catch (chunkError) {
+                        console.error(`❌ Error with chunk ${i}:`, chunkError);
+                        showToast(`⚠️ Chunk ${i + 1} failed. You can resume later!`, 'warning');
+                        // Continue with next chunk - resume capability
+                        continue;
+                    }
+                }
+                
+                // Step 3: Finalize transcription
+                updateProgress(95, 'Combining all chunks into final transcript...');
+                
+                const finalizeResponse = await fetch(`${colabEndpoint}/finalize-transcription`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: currentSessionId
+                    })
+                });
+                
+                if (!finalizeResponse.ok) {
+                    throw new Error('Failed to finalize transcription');
+                }
+                
+                const finalData = await finalizeResponse.json();
+                
+                updateProgress(100, 'Complete!');
+                
+                if (finalData.success) {
+                    setTimeout(() => {
+                        displayResult(finalData.transcript, finalData);
+                        saveToHistory(selectedFile.name, finalData.transcript, finalData);
+                        showToast(`✅ Chunked transcription complete! (${totalChunks} chunks)`, 'success');
+                        transcribeBtn.disabled = false;
+                        btnText.innerHTML = '🚀 Start Transcription';
+                        
+                        releaseWakeLock();
+                        bgIndicator.classList.remove('active');
+                    }, 500);
+                } else {
+                    throw new Error(finalData.error || 'Transcription failed');
+                }
+                
+            } catch (error) {
+                console.error('❌ Chunked transcription error:', error);
+                
+                let errorMessage = '❌ Transcription failed';
+                if (error.name === 'AbortError') {
+                    errorMessage = '⏱️ Request timeout';
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+                
+                showToast(errorMessage, 'error');
+                
+                if (currentSessionId) {
+                    showToast('💡 Session saved. You can resume this transcription later!', 'info');
+                }
+                
+                transcribeBtn.disabled = false;
+                btnText.innerHTML = '🚀 Start Transcription';
+                progressWrapper.style.display = 'none';
+                
+                releaseWakeLock();
+                bgIndicator.classList.remove('active');
+            }
+        }
+        
+        // ====================
+        // AI LECTURE NOTES GENERATION
+        // ====================
+        
+        async function generateLectureNotes() {
+            if (!currentTranscript) {
+                showToast('No transcript available', 'error');
+                return;
+            }
+            
+            const lectureNotesWrapper = document.getElementById('lectureNotesWrapper');
+            const lectureNotesBox = document.getElementById('lectureNotesBox');
+            
+            // Show loading state
+            lectureNotesWrapper.style.display = 'block';
+            lectureNotesBox.innerHTML = '<div style="text-align: center; padding: 40px;"><span class="spinner"></span><br><br>🤖 AI is analyzing your transcript and researching topics...<br><small>This may take 30-60 seconds</small></div>';
+            
+            showToast('🤖 Generating AI lecture notes with web research...', 'info');
+            
+            try {
+                const response = await fetch(`${colabEndpoint}/generate-lecture-notes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        transcript: currentTranscript,
+                        topic: selectedFile ? selectedFile.name : 'the lecture'
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'Failed to generate lecture notes');
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentLectureNotes = data.lecture_notes;
+                    
+                    // Display formatted lecture notes
+                    lectureNotesBox.innerHTML = formatLectureNotes(data.lecture_notes);
+                    
+                    // Update word count
+                    const wordCount = data.lecture_notes.split(/\s+/).length;
+                    document.getElementById('notesWordCount').textContent = `${wordCount} words`;
+                    
+                    showToast('✅ AI lecture notes generated successfully!', 'success');
+                    
+                    if (data.key_topics && data.key_topics.length > 0) {
+                        console.log('📚 Key topics identified:', data.key_topics);
+                    }
+                    
+                    if (data.web_search_used) {
+                        showToast('🌐 Enhanced with web research', 'info');
+                    }
+                    
+                } else {
+                    throw new Error(data.error || 'Failed to generate notes');
+                }
+                
+            } catch (error) {
+                console.error('❌ Lecture notes error:', error);
+                
+                lectureNotesBox.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #ef4444;">
+                        <span style="font-size: 48px;">❌</span><br><br>
+                        <strong>Failed to generate lecture notes</strong><br><br>
+                        <small>${error.message}</small><br><br>
+                        <small style="color: #6b7280;">
+                            💡 Tip: The server may need the HF_TOKEN configured for AI features.<br>
+                            Check the deployment settings or try again later.
+                        </small>
+                    </div>
+                `;
+                
+                showToast('Failed to generate lecture notes', 'error');
+            }
+        }
+        
+        function formatLectureNotes(notes) {
+            // Simple markdown-like formatting
+            let formatted = notes
+                .replace(/^# (.+)$/gm, '<h2 style="color: #6366f1; margin-top: 25px; margin-bottom: 15px;">$1</h2>')
+                .replace(/^## (.+)$/gm, '<h3 style="color: #8b5cf6; margin-top: 20px; margin-bottom: 10px;">$1</h3>')
+                .replace(/^### (.+)$/gm, '<h4 style="color: #a78bfa; margin-top: 15px; margin-bottom: 8px;">$1</h4>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/^- (.+)$/gm, '<li style="margin-left: 20px;">$1</li>')
+                .replace(/\n\n/g, '<br><br>');
+            
+            return `<div style="line-height: 1.8; font-size: 15px;">${formatted}</div>`;
+        }
+        
+        function copyLectureNotes() {
+            if (!currentLectureNotes) return;
+            
+            navigator.clipboard.writeText(currentLectureNotes).then(() => {
+                showToast('📋 Lecture notes copied to clipboard', 'success');
+            }).catch(err => {
+                showToast('Failed to copy notes', 'error');
+            });
+        }
+        
+        function downloadLectureNotes() {
+            if (!currentLectureNotes) return;
+            
+            const blob = new Blob([currentLectureNotes], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `lecture-notes-${Date.now()}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('📥 Lecture notes downloaded', 'success');
+        }
+        
+        function shareLectureNotes() {
+            if (!currentLectureNotes) return;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'AI Lecture Notes',
+                    text: currentLectureNotes
+                }).then(() => {
+                    showToast('📤 Lecture notes shared', 'success');
+                }).catch(() => {
+                    copyLectureNotes();
+                });
+            } else {
+                copyLectureNotes();
+                showToast('Share not available. Notes copied instead.', 'info');
+            }
         }
 
         // History Management
