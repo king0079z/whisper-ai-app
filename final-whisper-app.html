@@ -2076,10 +2076,8 @@ Click OK to open Settings, or Cancel to retry later.`;
             }
 
             // Check if file is large - use chunked upload
-            if (selectedFile.size > LARGE_FILE_THRESHOLD) {
-                showToast('🔄 Large file detected! Using chunked upload for reliability', 'info');
-                return await startChunkedTranscription();
-            }
+            // All files now use direct upload (chunked upload feature removed)
+            console.log(`📤 Uploading file: ${selectedFile.name} (${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`);
 
             const progressWrapper = document.getElementById('progressWrapper');
             const transcribeBtn = document.getElementById('transcribeBtn');
