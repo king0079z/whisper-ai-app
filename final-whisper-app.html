@@ -1434,31 +1434,43 @@
                             <span>🤖</span> Generate AI Lecture Notes
                         </button>
             </div>
-        </div>
                 
-                <!-- Lecture Notes Display -->
-                <div class="result-wrapper" id="lectureNotesWrapper" style="display: none; margin-top: 20px;">
-                    <div class="result-header">
-                        <span>📚 AI-Generated Lecture Notes</span>
-                        <div class="result-meta">
-                            <span class="meta-badge" id="notesWordCount">0 words</span>
+                    <!-- Lecture Notes Display -->
+                    <div class="result-wrapper" id="lectureNotesWrapper" style="display: none; margin-top: 20px;">
+                        <div class="result-header">
+                            <span>📚 AI-Generated Lecture Notes</span>
+                            <div class="result-meta">
+                                <span class="meta-badge" id="notesWordCount">0 words</span>
+        </div>
     </div>
-                    </div>
-                    <div class="result-text-box" id="lectureNotesBox" style="white-space: pre-wrap; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;"></div>
-                    
-                    <div class="action-grid">
-                        <button class="action-btn" onclick="copyLectureNotes()">
-                            <span>📋</span> Copy Notes
-                        </button>
-                        <button class="action-btn" onclick="downloadLectureNotes()">
-                            <span>💾</span> Download Notes
-                        </button>
-                        <button class="action-btn" onclick="shareLectureNotes()">
-                            <span>📤</span> Share Notes
-                        </button>
+                        <div class="result-text-box" id="lectureNotesBox" style="white-space: pre-wrap; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;"></div>
+                        
+                        <div class="action-grid">
+                            <button class="action-btn" onclick="copyLectureNotes()">
+                                <span>📋</span> Copy Notes
+                            </button>
+                            <button class="action-btn" onclick="downloadLectureNotes()">
+                                <span>💾</span> Download Notes
+                            </button>
+                            <button class="action-btn" onclick="shareLectureNotes()">
+                                <span>📤</span> Share Notes
+                            </button>
+                        </div>
+                        
+                        <!-- Visual Transformation Buttons -->
+                        <div class="action-grid" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(99, 102, 241, 0.2);">
+                            <button class="action-btn" onclick="generatePresentation()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                                <span>📊</span> Create Slides
+                            </button>
+                            <button class="action-btn" onclick="generateMindMap()" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                                <span>🧠</span> Mind Map
+                            </button>
+                            <button class="action-btn" onclick="generateFlashcards()" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+                                <span>📇</span> Flashcards
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
             <!-- Features Section -->
             <div class="card">
@@ -2075,9 +2087,26 @@ Click OK to open Settings, or Cancel to retry later.`;
                 return;
             }
 
-            // Check if file is large - use chunked upload
+            const fileSizeMB = selectedFile.size / 1024 / 1024;
+            
+            // Warn about large files (Hugging Face Spaces has memory limitations)
+            if (fileSizeMB > 200) {
+                const proceed = confirm(
+                    `⚠️ LARGE FILE WARNING (${fileSizeMB.toFixed(0)} MB)\n\n` +
+                    `Files over 200 MB may fail due to server memory limits.\n\n` +
+                    `RECOMMENDATIONS:\n` +
+                    `✅ Compress audio to lower bitrate (128kbps recommended)\n` +
+                    `✅ Convert video to audio-only (MP3/M4A)\n` +
+                    `✅ Split into smaller chunks and transcribe separately\n\n` +
+                    `Do you want to continue anyway?`
+                );
+                if (!proceed) {
+                    return;
+                }
+            }
+
             // All files now use direct upload (chunked upload feature removed)
-            console.log(`📤 Uploading file: ${selectedFile.name} (${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`);
+            console.log(`📤 Uploading file: ${selectedFile.name} (${fileSizeMB.toFixed(2)} MB)`);
 
             const progressWrapper = document.getElementById('progressWrapper');
             const transcribeBtn = document.getElementById('transcribeBtn');
@@ -2161,8 +2190,10 @@ Click OK to open Settings, or Cancel to retry later.`;
                 let errorMessage = '';
                 if (error.name === 'AbortError') {
                     errorMessage = 'Request timeout. File may be too large or connection is slow.';
-                } else if (error.message.includes('Failed to fetch')) {
-                    errorMessage = 'Cannot connect to server. Check if Colab is running.';
+                } else if (error.message.includes('Failed to fetch') || error.message.includes('502')) {
+                    errorMessage = '❌ Server Error (502 Bad Gateway)\n\nFile too large for server memory. Try:\n• Compress audio to lower quality\n• Convert to MP3 (128kbps)\n• Split file into smaller parts';
+                } else if (error.message.includes('tensor') || error.message.includes('500')) {
+                    errorMessage = '❌ Server Memory Error (500)\n\nFile exceeded server capacity. Solutions:\n• Reduce file size (compress audio)\n• Use audio-only format (MP3/M4A)\n• Process shorter segments';
                 } else {
                     errorMessage = error.message;
                 }
@@ -2670,6 +2701,611 @@ Click OK to open Settings, or Cancel to retry later.`;
                 copyLectureNotes();
                 showToast('Share not available. Notes copied instead.', 'info');
             }
+        }
+
+        // Visual Transformation Functions
+        async function generatePresentation() {
+            if (!currentLectureNotes) {
+                showToast('No lecture notes available', 'error');
+                return;
+            }
+            
+            showToast('📊 AI is creating professional presentation slides...', 'info');
+            
+            try {
+                // Call AI backend to generate presentation
+                const response = await fetch(`${SERVER_URL}/generate-presentation`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        lecture_notes: currentLectureNotes,
+                        topic: selectedFile ? selectedFile.name : 'Lecture'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to generate presentation');
+                }
+                
+                const slides = data.slides || [];
+                showToast(`✅ AI generated ${slides.length} professional slides!`, 'success');
+                
+                // Create presentation HTML from AI-generated slides
+                createPresentationHTML(slides);
+                
+            } catch (error) {
+                console.error('AI presentation error:', error);
+                showToast('⚠️ AI failed, using basic extraction...', 'warning');
+                
+                // Fallback to basic extraction
+                const sections = extractSections(currentLectureNotes);
+                const slides = sections.map(section => ({
+                    title: section.title,
+                    points: section.content.split('\n').filter(line => line.trim().length > 20).slice(0, 5)
+                }));
+                createPresentationHTML(slides);
+            }
+        }
+        
+        function createPresentationHTML(slides) {
+            
+            // Create HTML presentation
+            const presentationHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Generated Presentation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+        .slide-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .slide {
+            background: white;
+            border-radius: 20px;
+            padding: 60px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: none;
+        }
+        .slide.active { display: block; animation: slideIn 0.5s ease; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-title {
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+        }
+        .slide-content {
+            font-size: 1.3em;
+            line-height: 1.8;
+            color: #333;
+        }
+        .slide-content ul { margin-left: 30px; margin-top: 15px; list-style: none; }
+        .slide-content li { margin: 15px 0; padding-left: 30px; position: relative; }
+        .slide-content li:before {
+            content: '●';
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+        }
+        .control-btn {
+            background: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        .control-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        .slide-number {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        .ai-badge {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="ai-badge">🤖 AI-Generated</div>
+    <div class="slide-number" id="slideNumber">1 / ${slides.length}</div>
+    
+    <div class="slide-container">
+        ${slides.map((slide, index) => `
+        <div class="slide ${index === 0 ? 'active' : ''}" id="slide${index}">
+            <div class="slide-title">${slide.title}</div>
+            <div class="slide-content">
+                <ul>
+                    ${(slide.points || []).map(point => `<li>${point}</li>`).join('')}
+                </ul>
+            </div>
+        </div>
+        `).join('')}
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn" onclick="prevSlide()">← Previous</button>
+        <button class="control-btn" onclick="nextSlide()">Next →</button>
+    </div>
+    
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        
+        function showSlide(n) {
+            slides.forEach(slide => slide.classList.remove('active'));
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+            document.getElementById('slideNumber').textContent = (currentSlide + 1) + ' / ' + totalSlides;
+        }
+        
+        function nextSlide() { showSlide(currentSlide + 1); }
+        function prevSlide() { showSlide(currentSlide - 1); }
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+    <\/script>
+</body>
+</html>`;
+            
+            // Open in new window
+            const blob = new Blob([presentationHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            
+            showToast('✅ Presentation created! Open in new tab', 'success');
+        }
+
+        async function generateMindMap() {
+            if (!currentLectureNotes) {
+                showToast('No lecture notes available', 'error');
+                return;
+            }
+            
+            showToast('🧠 AI is creating intelligent mind map...', 'info');
+            
+            try {
+                // Call AI backend to generate mind map structure
+                const response = await fetch(`${SERVER_URL}/generate-mindmap`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        lecture_notes: currentLectureNotes
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to generate mind map');
+                }
+                
+                const nodes = data.nodes || [];
+                showToast(`✅ AI generated ${nodes.length}-node mind map!`, 'success');
+                
+                // Create Mermaid diagram from AI nodes
+                createMindMapHTML(nodes);
+                
+            } catch (error) {
+                console.error('AI mind map error:', error);
+                showToast('⚠️ AI failed, using basic extraction...', 'warning');
+                
+                // Fallback to basic extraction
+                const sections = extractSections(currentLectureNotes);
+                const nodes = sections.map((section, i) => ({
+                    id: `topic${i}`,
+                    label: section.title,
+                    subtopics: section.content.split('\n').filter(l => l.trim().length > 10).slice(0, 3)
+                }));
+                createMindMapHTML(nodes);
+            }
+        }
+        
+        function createMindMapHTML(nodes) {
+            // Create Mermaid diagram
+            let mermaidCode = 'graph TD\n';
+            mermaidCode += '    Root[📚 Lecture Topics]:::root\n';
+            
+            nodes.forEach((node, index) => {
+                const nodeId = `N${index}`;
+                const title = node.label.replace(/[^a-zA-Z0-9\\s]/g, '').substring(0, 30);
+                mermaidCode += `    Root --> ${nodeId}[${title}]:::topic\n`;
+                
+                // Add subtopics
+                if (node.subtopics && node.subtopics.length > 0) {
+                    node.subtopics.slice(0, 3).forEach((subtopic, pIndex) => {
+                        const subId = `${nodeId}_${pIndex}`;
+                        const text = subtopic.replace(/[^a-zA-Z0-9\\s]/g, '').substring(0, 25);
+                        mermaidCode += `    ${nodeId} --> ${subId}[${text}]:::detail\n`;
+                    });
+                }
+            });
+            
+            mermaidCode += '\\n    classDef root fill:#667eea,stroke:#764ba2,stroke-width:3px,color:#fff\n';
+            mermaidCode += '    classDef topic fill:#4facfe,stroke:#00f2fe,stroke-width:2px,color:#fff\n';
+            mermaidCode += '    classDef detail fill:#43e97b,stroke:#38f9d7,stroke-width:1px\n';
+            
+            // Create HTML with Mermaid
+            const mindMapHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AI Mind Map</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"><\/script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .ai-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 40px;
+        }
+        .mermaid { text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="ai-badge">🤖 AI-Generated</div>
+        <h1>🧠 AI-Powered Mind Map</h1>
+        <div class="mermaid">
+${mermaidCode}
+        </div>
+    </div>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { useMaxWidth: true } });
+    <\/script>
+</body>
+</html>`;
+            
+            const blob = new Blob([mindMapHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            
+            showToast('✅ Mind map created!', 'success');
+        }
+
+        async function generateFlashcards() {
+            if (!currentLectureNotes) {
+                showToast('No lecture notes available', 'error');
+                return;
+            }
+            
+            showToast('📇 AI is creating study flashcards...', 'info');
+            
+            try {
+                // Call AI backend to generate flashcards
+                const response = await fetch(`${SERVER_URL}/generate-flashcards`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        lecture_notes: currentLectureNotes
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to generate flashcards');
+                }
+                
+                const flashcards = data.flashcards || [];
+                showToast(`✅ AI generated ${flashcards.length} study flashcards!`, 'success');
+                
+                // Create flashcards HTML
+                createFlashcardsHTML(flashcards);
+                
+            } catch (error) {
+                console.error('AI flashcards error:', error);
+                showToast('⚠️ AI failed, using basic extraction...', 'warning');
+                
+                // Fallback to basic extraction
+                const sections = extractSections(currentLectureNotes);
+                const flashcards = [];
+                
+                sections.forEach(section => {
+                    flashcards.push({
+                        question: `What is covered in: ${section.title}?`,
+                        answer: section.content.substring(0, 300)
+                    });
+                });
+                
+                createFlashcardsHTML(flashcards);
+            }
+        }
+        
+        function createFlashcardsHTML(flashcards) {
+            
+            // Create HTML flashcards app
+            const flashcardsHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Flashcards</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .flashcard-container {
+            max-width: 800px;
+            width: 100%;
+        }
+        .flashcard {
+            background: white;
+            border-radius: 20px;
+            padding: 60px 40px;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .flashcard.flipped { transform: rotateY(180deg); }
+        .flashcard-front, .flashcard-back {
+            backface-visibility: hidden;
+            position: absolute;
+            width: 100%;
+            padding: 40px;
+        }
+        .flashcard-back { transform: rotateY(180deg); }
+        .flashcard-question {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #333;
+            line-height: 1.5;
+        }
+        .flashcard-answer {
+            font-size: 1.4em;
+            color: #555;
+            line-height: 1.6;
+        }
+        .card-number {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 600;
+        }
+        .ai-badge {
+            position: absolute;
+            top: 20px;
+            left: 30px;
+            background: rgba(255,255,255,0.95);
+            color: #667eea;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        .control-btn {
+            background: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        .control-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        .hint { margin-top: 20px; color: rgba(255,255,255,0.8); font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="flashcard-container">
+        <div class="flashcard" id="flashcard" onclick="flipCard()">
+            <div class="ai-badge">🤖 AI</div>
+            <div class="card-number" id="cardNumber">1 / ${flashcards.length}</div>
+            <div class="flashcard-front">
+                <div class="flashcard-question" id="question">Loading...</div>
+            </div>
+            <div class="flashcard-back">
+                <div class="flashcard-answer" id="answer">Loading...</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn" onclick="prevCard()">← Previous</button>
+            <button class="control-btn" onclick="flipCard()">🔄 Flip Card</button>
+            <button class="control-btn" onclick="nextCard()">Next →</button>
+        </div>
+        
+        <div class="hint">💡 Click card to flip • Use arrow keys to navigate</div>
+    </div>
+    
+    <script>
+        const cards = ${JSON.stringify(flashcards)};
+        let currentCard = 0;
+        let isFlipped = false;
+        
+        function showCard(index) {
+            const card = cards[index];
+            document.getElementById('question').textContent = card.question;
+            document.getElementById('answer').textContent = card.answer;
+            document.getElementById('cardNumber').textContent = (currentCard + 1) + ' / ' + cards.length;
+            
+            // Reset flip
+            if (isFlipped) flipCard();
+        }
+        
+        function flipCard() {
+            document.getElementById('flashcard').classList.toggle('flipped');
+            isFlipped = !isFlipped;
+        }
+        
+        function nextCard() {
+            currentCard = (currentCard + 1) % cards.length;
+            showCard(currentCard);
+        }
+        
+        function prevCard() {
+            currentCard = (currentCard - 1 + cards.length) % cards.length;
+            showCard(currentCard);
+        }
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextCard();
+            if (e.key === 'ArrowLeft') prevCard();
+            if (e.key === ' ') { e.preventDefault(); flipCard(); }
+        });
+        
+        showCard(0);
+    <\/script>
+</body>
+</html>`;
+            
+            const blob = new Blob([flashcardsHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            
+            showToast(`✅ Created ${flashcards.length} flashcards!`, 'success');
+        }
+
+        function extractSections(notes) {
+            // Extract sections from markdown-style notes
+            const sections = [];
+            const lines = notes.split('\\n');
+            let currentSection = null;
+            
+            lines.forEach(line => {
+                // Check for headers (##, ###, etc.)
+                if (line.match(/^#{1,3}\\s+(.+)$/)) {
+                    if (currentSection) {
+                        sections.push(currentSection);
+                    }
+                    currentSection = {
+                        title: line.replace(/^#{1,3}\\s+/, '').replace(/[📚🎯📋💡🧠📊✨🔍]/g, '').trim(),
+                        content: ''
+                    };
+                } else if (currentSection && line.trim()) {
+                    currentSection.content += line + '\\n';
+                }
+            });
+            
+            if (currentSection) {
+                sections.push(currentSection);
+            }
+            
+            // If no sections found, create a single section
+            if (sections.length === 0) {
+                sections.push({
+                    title: 'Lecture Summary',
+                    content: notes.substring(0, 500)
+                });
+            }
+            
+            return sections.slice(0, 10); // Limit to 10 sections
         }
 
         // History Management
