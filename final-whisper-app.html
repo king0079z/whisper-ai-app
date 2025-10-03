@@ -1697,12 +1697,15 @@
 
         // Initialize PWA Manifest
         function setupManifest() {
+            // Get the current page URL for proper manifest URLs
+            const baseUrl = window.location.origin + window.location.pathname.replace('final-whisper-app.html', '');
+            
             const manifest = {
                 name: "Whisper AI Pro",
                 short_name: "Whisper AI",
                 description: "AI-powered speech to text transcription",
-                start_url: "./",
-                scope: "./",
+                start_url: window.location.pathname,
+                scope: baseUrl,
                 display: "standalone",
                 background_color: "#6366f1",
                 theme_color: "#6366f1",
@@ -1782,41 +1785,9 @@
 
         // Setup Service Worker
         function setupServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                const swCode = `
-                    self.addEventListener('install', e => {
-                        self.skipWaiting();
-                        console.log('Service Worker installed');
-                    });
-                    
-                    self.addEventListener('activate', e => {
-                        self.clients.claim();
-                        console.log('Service Worker activated');
-                    });
-                    
-                    self.addEventListener('fetch', e => {
-                        // Network-first strategy for API calls
-                        if (e.request.url.includes('/health') || e.request.url.includes('/transcribe')) {
-                            e.respondWith(fetch(e.request));
-                            return;
-                        }
-                        
-                        // Cache-first for static assets
-                        e.respondWith(
-                            caches.match(e.request).then(response => {
-                                return response || fetch(e.request);
-                            })
-                        );
-                    });
-                `;
-                
-                const blob = new Blob([swCode], { type: 'application/javascript' });
-                const swUrl = URL.createObjectURL(blob);
-                
-                navigator.serviceWorker.register(swUrl)
-                    .then(reg => console.log('✅ Service Worker registered'))
-                    .catch(err => console.log('❌ SW Error:', err));
-            }
+            // Service Worker disabled - blob URLs not supported on GitHub Pages
+            // App works perfectly without it!
+            console.log('ℹ️ Service Worker: Not needed for this app');
         }
 
         // Check Connection
