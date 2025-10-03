@@ -1315,11 +1315,17 @@
                 <span class="pill">🔒 Secure</span>
             </div>
             
-            <div id="connectionStatus">
+            <div id="connectionStatus" onclick="manualReconnect()" style="cursor: pointer;" title="Click to reconnect">
                 <span>● Initializing...</span>
+        </div>
+
+            <div style="margin-top: 15px;">
+                <button class="pill" onclick="manualReconnect()" style="cursor: pointer; border: 2px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.2); padding: 10px 20px;">
+                    🔄 Reconnect Server
+                </button>
             </div>
-            <div id="keepAliveStatus" style="display: none; margin-top: 10px; font-size: 13px; opacity: 0.9; background: rgba(16, 185, 129, 0.2); padding: 6px 16px; border-radius: 20px; display: inline-block;">
-                <span>⚡ Keep-Alive: Active</span>
+            <div id="keepAliveStatus" style="margin-top: 10px; font-size: 13px; opacity: 0.9; background: rgba(16, 185, 129, 0.2); padding: 6px 16px; border-radius: 20px; display: inline-block;">
+                <span>⚡ Auto-Ping: Active</span>
             </div>
         </div>
 
@@ -1480,7 +1486,8 @@
                        placeholder="https://your-colab-url.ngrok-free.dev" 
                        value="https://merilyn-shimmery-marian.ngrok-free.dev">
                 <small class="input-help">
-                    Your ngrok URL from Google Colab backend
+                    Your ngrok URL from Google Colab backend<br>
+                    💡 If server disconnects, click the 🔄 Reconnect button on the home screen
                 </small>
             </div>
 
@@ -1647,6 +1654,9 @@
         let qualityMode = localStorage.getItem('qualityMode') || 'auto';
         let backgroundMode = localStorage.getItem('backgroundMode') !== 'false';
         let wakeLock = null;
+        let keepAliveInterval = null;
+        let connectionAttempts = 0;
+        let isServerConnected = false;
 
         // Initialize PWA Manifest
         function setupManifest() {
@@ -1711,6 +1721,9 @@
             
             // Check connection
             await checkConnection();
+            
+            // Start keep-alive pinging
+            startKeepAlive();
             
             // Setup file upload handlers
             setupFileHandlers();
@@ -1811,34 +1824,152 @@
         }
 
         // Keep Colab Server Alive
-        let keepAliveInterval = null;
-        
         function startKeepAlive() {
             // Clear any existing interval
             if (keepAliveInterval) {
                 clearInterval(keepAliveInterval);
             }
             
-            // Ping server every 4 minutes to keep Colab alive
+            // Ping server every 3 minutes to keep Colab alive
             keepAliveInterval = setInterval(async () => {
                 try {
-                    await fetch(`${colabEndpoint}/health`, {
+                    const response = await fetch(`${colabEndpoint}/health`, {
                         method: 'GET',
                         headers: { 'Cache-Control': 'no-cache' }
                     });
-                    console.log('✅ Keep-alive ping sent');
+                    
+                    if (response.ok) {
+                        console.log('✅ Keep-alive ping successful');
+                        const keepAliveStatus = document.getElementById('keepAliveStatus');
+                        if (keepAliveStatus) {
+                            keepAliveStatus.style.background = 'rgba(16, 185, 129, 0.2)';
+                            keepAliveStatus.innerHTML = '<span>⚡ Auto-Ping: Active</span>';
+                        }
+                        isServerConnected = true;
+                } else {
+                        throw new Error('Server not responding');
+                    }
                 } catch (error) {
                     console.log('⚠️ Keep-alive ping failed:', error);
-                    // Try to reconnect
-                    checkConnection();
+                    isServerConnected = false;
+                    
+                    // Update UI to show server is down
+                    const statusEl = document.getElementById('connectionStatus');
+                    statusEl.innerHTML = '<span style="color: #ef4444;">● Server Down</span>';
+                    statusEl.title = 'Click to reconnect | Check Colab';
+                    
+                    const keepAliveStatus = document.getElementById('keepAliveStatus');
+                    if (keepAliveStatus) {
+                        keepAliveStatus.style.background = 'rgba(239, 68, 68, 0.2)';
+                        keepAliveStatus.innerHTML = '<span>⚠️ Auto-Ping: Server Down</span>';
+                    }
+                    
+                    // Show notification once
+                    if (!window.serverDownNotified) {
+                        showToast('⚠️ Server connection lost. Click 🔄 Reconnect button', 'warning');
+                        window.serverDownNotified = true;
+                        
+                        // Reset notification flag after 10 minutes
+                        setTimeout(() => {
+                            window.serverDownNotified = false;
+                        }, 600000);
+                    }
                 }
-            }, 240000); // 4 minutes
+            }, 180000); // 3 minutes
+            
+            console.log('✅ Auto-ping started (every 3 minutes)');
         }
         
         function stopKeepAlive() {
             if (keepAliveInterval) {
                 clearInterval(keepAliveInterval);
                 keepAliveInterval = null;
+            }
+        }
+
+        // Manual Reconnect Function
+        async function manualReconnect() {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.innerHTML = '<span>● Reconnecting...</span>';
+            showToast('🔄 Attempting to reconnect to server...', 'info');
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+                
+                const response = await fetch(`${colabEndpoint}/health`, {
+                    method: 'GET',
+                    signal: controller.signal,
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    statusEl.innerHTML = '<span style="color: #10b981;">● Connected & Ready</span>';
+                    statusEl.title = `Server online | ${data.requests_processed || 0} requests processed`;
+                    isServerConnected = true;
+                    connectionAttempts = 0;
+                    
+                    showToast('✅ Server reconnected successfully!', 'success');
+                    
+                    // Restart keep-alive if not running
+                    if (!keepAliveInterval) {
+                        startKeepAlive();
+                    }
+                    
+                    // Update keep-alive status
+                    const keepAliveStatus = document.getElementById('keepAliveStatus');
+                    if (keepAliveStatus) {
+                        keepAliveStatus.style.background = 'rgba(16, 185, 129, 0.2)';
+                        keepAliveStatus.innerHTML = '<span>⚡ Auto-Ping: Active</span>';
+                        keepAliveStatus.style.display = 'inline-block';
+                    }
+                    
+                    return true;
+                } else {
+                    throw new Error('Server responded with error');
+                }
+            } catch (error) {
+                isServerConnected = false;
+                statusEl.innerHTML = '<span style="color: #ef4444;">● Server Down</span>';
+                statusEl.title = 'Click to retry | Check if Colab is running';
+                
+                // Update keep-alive status
+                const keepAliveStatus = document.getElementById('keepAliveStatus');
+                if (keepAliveStatus) {
+                    keepAliveStatus.style.background = 'rgba(239, 68, 68, 0.2)';
+                    keepAliveStatus.innerHTML = '<span>⚠️ Auto-Ping: Server Down</span>';
+                }
+                
+                showServerDownDialog();
+                return false;
+            }
+        }
+
+        // Show Server Down Dialog
+        function showServerDownDialog() {
+            const message = `⚠️ Cannot Connect to Colab Server!
+
+The server might have stopped. Here's what to do:
+
+1. Go to your Google Colab tab
+2. Check if the last cell is still running
+3. If stopped, click the cell and press "Run" (▶️)
+4. Wait for the new ngrok URL to appear
+5. Copy the new URL
+6. Click Settings (⚙️) in this app
+7. Paste the new URL and save
+
+📌 Tip: Keep the Colab tab open to prevent disconnection!
+
+Click OK to open Settings, or Cancel to retry later.`;
+            
+            if (confirm(message)) {
+                openSettings();
             }
         }
 
