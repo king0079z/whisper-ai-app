@@ -56,6 +56,33 @@
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
         }
+        
+        /* MOBILE PERFORMANCE BOOST - Hardware Acceleration */
+        @media (max-width: 768px) {
+            *, *::before, *::after {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+            }
+            
+            /* Enable GPU acceleration for smooth animations */
+            .card, .action-btn, .primary-btn, .modal-content, 
+            .result-wrapper, .toast, .icon-btn {
+                transform: translateZ(0);
+                backface-visibility: hidden;
+                perspective: 1000px;
+            }
+            
+            /* Smooth scrolling everywhere */
+            html {
+                scroll-behavior: smooth;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Optimize touch interactions */
+            button, a, input, select, textarea {
+                touch-action: manipulation;
+            }
+        }
 
         html {
             width: 100%;
@@ -1218,7 +1245,7 @@
                 margin-bottom: 28px;
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
             }
-
+            
             .upload-zone {
                 padding: 70px 28px;
                 min-height: 320px;
@@ -1583,6 +1610,25 @@
         @media screen and (max-width: 768px) {
             body {
                 position: relative;
+                overflow-x: hidden;
+                overflow-y: auto;
+            }
+            
+            /* Hide/simplify animated background on mobile for better performance */
+            .animated-bg {
+                display: none;
+            }
+            
+            /* Simpler solid background for mobile */
+            body::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+                z-index: -1;
             }
             
             /* Better touch feedback on mobile */
@@ -1657,6 +1703,168 @@
                 box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
                 z-index: 90;
             }
+            
+            /* Fix loading modal on mobile - ONLY when visible */
+            .modal[style*="display: block"] {
+                padding: 0 !important;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            /* Ensure modals are hidden by default */
+            .modal {
+                display: none !important;
+            }
+            
+            .modal[style*="display: block"] {
+                display: flex !important;
+            }
+            
+            .modal-content {
+                width: calc(100vw - 40px) !important;
+                max-width: 500px !important;
+                margin: 20px !important;
+                max-height: calc(100vh - 40px);
+                overflow-y: auto;
+            }
+            
+            /* Better lecture notes display on mobile */
+            #lectureNotesWrapper {
+                width: 100%;
+                max-width: 100%;
+                margin: 24px 0;
+            }
+            
+            #lectureNotesBox {
+                max-height: 70vh !important;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Fix result wrapper on mobile */
+            .result-wrapper {
+                width: 100%;
+                margin: 24px 0;
+                padding: 0;
+            }
+            
+            .result-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            
+            /* Improve app container on mobile */
+            .app-container {
+                width: 100%;
+                max-width: 100%;
+                min-height: 100vh;
+            }
+            
+            /* Fix card layout on mobile */
+            .card-grid {
+                grid-template-columns: 1fr;
+                width: 100%;
+            }
+            
+            /* Better loading indicator on mobile */
+            .loading-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(10px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+            }
+            
+            .loading-content {
+                background: white;
+                border-radius: 28px;
+                padding: 40px 32px;
+                text-align: center;
+                max-width: calc(100vw - 40px);
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            }
+            
+            /* Fix action buttons layout on mobile */
+            .action-grid {
+                width: 100%;
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            
+            .action-grid .action-btn {
+                width: 100%;
+            }
+            
+            /* Ensure full width for all interactive elements */
+            .primary-btn, .secondary-btn {
+                width: 100%;
+                max-width: 100%;
+            }
+            
+            /* Fix file info display */
+            .file-info {
+                width: 100%;
+            }
+            
+            /* Better settings modal on mobile */
+            #settingsModal .modal-content,
+            #historyModal .modal-content,
+            #installModal .modal-content {
+                width: calc(100vw - 32px) !important;
+                max-height: calc(100vh - 80px);
+                overflow-y: auto;
+            }
+            
+            /* Make close button bigger and easier to tap on mobile */
+            .close-modal-btn {
+                width: 56px !important;
+                height: 56px !important;
+                font-size: 28px !important;
+                top: 16px !important;
+                right: 16px !important;
+                background: rgba(255, 255, 255, 0.95) !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 100;
+            }
+            
+            .close-modal-btn:active {
+                transform: scale(0.9);
+                background: rgba(240, 240, 240, 0.95) !important;
+            }
+            
+            /* Better modal header on mobile */
+            .modal-header {
+                font-size: 26px !important;
+                margin-bottom: 24px;
+                padding-right: 60px; /* Space for close button */
+            }
+            
+            /* Install instructions better spacing */
+            .install-steps {
+                padding-left: 0;
+            }
+            
+            .install-steps li {
+                padding: 16px 20px;
+                margin: 12px 0;
+                font-size: 18px;
+                line-height: 1.6;
+            }
+            
+            .step-number {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+            }
         }
     </style>
 </head>
@@ -1675,7 +1883,7 @@
                 </button>
             </div>
             <div class="nav-group">
-                <button class="icon-btn pulse" onclick="showInstallInstructions()" title="Install on iPhone" id="installGuideBtn">
+                <button class="icon-btn" onclick="showInstallInstructions()" title="Install on iPhone" id="installGuideBtn" style="display: none;">
                     📱
                 </button>
                 <button class="icon-btn" onclick="openSettings()" title="Settings">
@@ -2154,12 +2362,22 @@
             // Setup file upload handlers
             setupFileHandlers();
             
-            // Show install guide for first time iOS users
-            if (isIOS() && !localStorage.getItem('installGuideShown')) {
-                setTimeout(() => {
-                    showToast('Tap 📱 to learn how to install this app on your iPhone!', 'info');
-                    localStorage.setItem('installGuideShown', 'true');
-                }, 2000);
+            // Show install button ONLY on iOS devices
+            const installBtn = document.getElementById('installGuideBtn');
+            if (isIOS() && !window.navigator.standalone) {
+                // Only show if NOT already installed as PWA
+                installBtn.style.display = 'flex';
+                
+                // Show guide for first time iOS users
+                if (!localStorage.getItem('installGuideShown')) {
+                    setTimeout(() => {
+                        showToast('Tap 📱 to learn how to install this app on your iPhone!', 'info');
+                        localStorage.setItem('installGuideShown', 'true');
+                    }, 3000);
+                }
+            } else {
+                // Hide on Android and desktop
+                installBtn.style.display = 'none';
             }
         });
 
