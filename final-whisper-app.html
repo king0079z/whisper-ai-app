@@ -24,10 +24,6 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.webmanifest" id="manifest-link">
     
-    <!-- FFmpeg.wasm for client-side audio processing -->
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/umd/ffmpeg.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
-    
     <style>
         :root {
             --primary: #6366f1;
@@ -3029,6 +3025,21 @@ Click OK to open Settings, or Cancel to retry later.`;
         async function loadFFmpeg() {
             if (ffmpegInstance) return ffmpegInstance;
             
+            // Check if running from file:// protocol
+            if (window.location.protocol === 'file:') {
+                throw new Error(
+                    '🚫 FFmpeg.wasm requires a web server!\n\n' +
+                    '❌ Cannot run from file:// protocol\n\n' +
+                    '✅ SOLUTIONS:\n' +
+                    '1. Run local server:\n' +
+                    '   python -m http.server 8080\n' +
+                    '   Then open: http://localhost:8080/final-whisper-app.html\n\n' +
+                    '2. Deploy to GitHub Pages (recommended)\n\n' +
+                    '3. For now: Compress your file manually\n' +
+                    '   (Use Audacity to reduce to <100MB)'
+                );
+            }
+            
             try {
                 const { FFmpeg } = FFmpegWASM;
                 const { toBlobURL } = FFmpegUtil;
@@ -3046,7 +3057,19 @@ Click OK to open Settings, or Cancel to retry later.`;
                 return ffmpegInstance;
             } catch (error) {
                 console.error('❌ Failed to load FFmpeg:', error);
-                throw new Error('Failed to load audio processing engine');
+                
+                // Provide helpful error message
+                if (error.message.includes('Worker')) {
+                    throw new Error(
+                        '🚫 Web Worker Error!\n\n' +
+                        'FFmpeg.wasm requires:\n' +
+                        '✅ Web server (http:// or https://)\n' +
+                        '✅ Cannot use file:// protocol\n\n' +
+                        'Quick fix: Run python -m http.server 8080'
+                    );
+                }
+                
+                throw new Error('Failed to load audio processing engine: ' + error.message);
             }
         }
         
