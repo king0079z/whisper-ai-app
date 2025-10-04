@@ -3028,10 +3028,17 @@ Click OK to open Settings, or Cancel to retry later.`;
             showSmartSplitUI(file, fileSizeMB);
             
             try {
-                updateSmartSplitStatus('uploading', '📤 Uploading file to server...');
-                updatePartProgress(1, 5, 'Uploading...');
-                updatePartProgress(2, 0, 'Waiting...');
-                updatePartProgress(3, 0, 'Waiting...');
+                // Calculate estimated times
+                const estimatedAudioMinutes = Math.floor(fileSizeMB * 0.6);
+                const estimatedTotalMinutes = Math.floor(estimatedAudioMinutes / 172 * 25);
+                const part1Time = Math.floor(estimatedTotalMinutes / 3);
+                const part2Time = Math.floor(estimatedTotalMinutes * 2 / 3);
+                const part3Time = estimatedTotalMinutes;
+                
+                updateSmartSplitStatus('uploading', `📤 Uploading file to server... (~2-3 minutes)`);
+                updatePartProgress(1, 5, `Waiting... (starts in ~3 min)`);
+                updatePartProgress(2, 0, `Waiting... (starts in ~${part1Time} min)`);
+                updatePartProgress(3, 0, `Waiting... (starts in ~${part2Time} min)`);
                 
                 // Create FormData
                 const formData = new FormData();
@@ -3042,16 +3049,35 @@ Click OK to open Settings, or Cancel to retry later.`;
                 
                 // Upload to server
                 updatePartProgress(1, 20, 'Server received file...');
-                updateSmartSplitStatus('processing', '🔄 Server is analyzing and splitting...');
+                updateSmartSplitStatus('processing', `🔄 Server is processing... (~${estimatedTotalMinutes} minutes total)`);
+                
+                // Show periodic updates while waiting
+                const startTime = Date.now();
+                const statusInterval = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - startTime) / 60000); // minutes
+                    const remaining = Math.max(0, estimatedTotalMinutes - elapsed);
+                    
+                    if (elapsed < part1Time) {
+                        updateSmartSplitStatus('processing', `🔄 Part 1 processing... (~${remaining} min remaining)`);
+                        updatePartProgress(1, Math.min(90, 20 + elapsed * 3), 'Transcribing...');
+                    } else if (elapsed < part2Time) {
+                        updateSmartSplitStatus('processing', `🔄 Part 2 processing... (~${remaining} min remaining)`);
+                        updatePartProgress(1, 100, '✅ Complete');
+                        updatePartProgress(2, Math.min(90, 20 + (elapsed - part1Time) * 3), 'Transcribing...');
+                    } else {
+                        updateSmartSplitStatus('processing', `🔄 Part 3 processing... (~${remaining} min remaining)`);
+                        updatePartProgress(1, 100, '✅ Complete');
+                        updatePartProgress(2, 100, '✅ Complete');
+                        updatePartProgress(3, Math.min(90, 20 + (elapsed - part2Time) * 3), 'Transcribing...');
+                    }
+                }, 30000); // Update every 30 seconds
                 
                 const response = await fetch(`${colabEndpoint}/transcribe-large`, {
                     method: 'POST',
                     body: formData
                 });
                 
-                // Simulate progress while server works
-                updatePartProgress(1, 40, 'Server splitting part 1...');
-                updatePartProgress(2, 20, 'Server preparing part 2...');
+                clearInterval(statusInterval);
                 
                 const result = await response.json();
                 
@@ -3096,6 +3122,12 @@ Click OK to open Settings, or Cancel to retry later.`;
                 
             } catch (error) {
                 console.error('❌ Server-side transcription error:', error);
+                
+                // Clear status interval if it exists
+                if (typeof statusInterval !== 'undefined') {
+                    clearInterval(statusInterval);
+                }
+                
                 showToast('Error: ' + error.message, 'error');
                 updateSmartSplitStatus('error', '❌ ' + error.message);
                 updatePartProgress(1, 0, '❌ Failed');
@@ -3170,24 +3202,31 @@ Click OK to open Settings, or Cancel to retry later.`;
             
             // ✨ Smart File Splitting for large files (>100MB)
             if (fileSizeMB > 100) {
+                // Estimate duration from file size (rough: 1 MB ≈ 0.6 minutes of audio)
+                const estimatedAudioMinutes = Math.floor(fileSizeMB * 0.6);
+                const estimatedProcessingMinutes = Math.floor(estimatedAudioMinutes / 172 * 25); // 172 min audio = 25 min processing
+                
                 const proceed = confirm(
                     `🔪 SERVER-SIDE SMART SPLITTING FOR LARGE FILE\n\n` +
                     `File: ${selectedFile.name}\n` +
-                    `Size: ${fileSizeMB.toFixed(0)} MB\n\n` +
+                    `Size: ${fileSizeMB.toFixed(0)} MB\n` +
+                    `Estimated audio length: ~${estimatedAudioMinutes} minutes\n\n` +
+                    `⏱️ PROCESSING TIME ESTIMATE:\n` +
+                    `Total time: ${estimatedProcessingMinutes}-${estimatedProcessingMinutes + 5} minutes\n` +
+                    `• Part 1: 0-${Math.floor(estimatedProcessingMinutes/3)} min\n` +
+                    `• Part 2: ${Math.floor(estimatedProcessingMinutes/3)}-${Math.floor(estimatedProcessingMinutes*2/3)} min\n` +
+                    `• Part 3: ${Math.floor(estimatedProcessingMinutes*2/3)}-${estimatedProcessingMinutes} min\n\n` +
                     `✨ AUTOMATIC SERVER PROCESSING:\n` +
-                    `The server will automatically:\n\n` +
-                    `1️⃣ Upload your file to the server\n` +
-                    `2️⃣ Split audio into 3 equal parts (time-based)\n` +
+                    `1️⃣ Upload to server\n` +
+                    `2️⃣ Split into 3 parts (time-based)\n` +
                     `3️⃣ Transcribe each part with Whisper AI\n` +
-                    `4️⃣ Combine all transcripts automatically\n\n` +
-                    `⏱️ Estimated time: 10-15 minutes\n` +
-                    `📊 You'll see live progress for each part\n\n` +
-                    `💡 HOW IT WORKS:\n` +
-                    `• Server uses FFmpeg to split properly\n` +
-                    `• Creates valid audio files (not broken)\n` +
-                    `• Works with any format (MP3, M4A, MP4, etc.)\n` +
-                    `• Much more reliable than uploading large files directly\n\n` +
-                    `🚀 Ready to start server-side processing?`
+                    `4️⃣ Combine all transcripts\n\n` +
+                    `⚠️ IMPORTANT:\n` +
+                    `• Keep this window/tab OPEN\n` +
+                    `• Don't close the browser\n` +
+                    `• Server processes in background\n` +
+                    `• You'll see result when complete\n\n` +
+                    `🚀 Ready to start? (~${estimatedProcessingMinutes} minutes)`
                 );
                 if (!proceed) {
                     return;
