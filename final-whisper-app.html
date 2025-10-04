@@ -2009,6 +2009,313 @@
                 max-height: 70vh !important;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
+                padding: 32px !important;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            }
+            
+            /* ============================================
+               BEAUTIFUL LECTURE NOTES STYLING
+               ============================================ */
+            
+            .lecture-notes-content {
+                line-height: 1.9 !important;
+                font-size: 17px !important;
+                color: #1f2937;
+                max-width: 900px;
+                margin: 0 auto;
+            }
+            
+            body.dark-mode .lecture-notes-content {
+                color: #e5e7eb;
+            }
+            
+            /* Headings - Beautiful hierarchy */
+            .lecture-notes-content h1 {
+                font-size: 38px !important;
+                font-weight: 800 !important;
+                color: #6366f1 !important;
+                margin: 48px 0 24px 0 !important;
+                padding-bottom: 16px !important;
+                border-bottom: 3px solid #6366f1 !important;
+                line-height: 1.3 !important;
+            }
+            
+            .lecture-notes-content h2 {
+                font-size: 32px !important;
+                font-weight: 700 !important;
+                color: #8b5cf6 !important;
+                margin: 40px 0 20px 0 !important;
+                padding-left: 16px !important;
+                border-left: 5px solid #8b5cf6 !important;
+                line-height: 1.4 !important;
+            }
+            
+            .lecture-notes-content h3 {
+                font-size: 26px !important;
+                font-weight: 600 !important;
+                color: #a78bfa !important;
+                margin: 32px 0 16px 0 !important;
+                line-height: 1.4 !important;
+            }
+            
+            .lecture-notes-content h4 {
+                font-size: 22px !important;
+                font-weight: 600 !important;
+                color: #c4b5fd !important;
+                margin: 24px 0 12px 0 !important;
+                line-height: 1.4 !important;
+            }
+            
+            body.dark-mode .lecture-notes-content h1 { color: #818cf8 !important; border-bottom-color: #818cf8 !important; }
+            body.dark-mode .lecture-notes-content h2 { color: #a78bfa !important; border-left-color: #a78bfa !important; }
+            body.dark-mode .lecture-notes-content h3 { color: #c4b5fd !important; }
+            body.dark-mode .lecture-notes-content h4 { color: #ddd6fe !important; }
+            
+            /* Paragraphs */
+            .lecture-notes-content p {
+                margin: 18px 0 !important;
+                line-height: 1.9 !important;
+                text-align: justify !important;
+            }
+            
+            /* Emphasis */
+            .lecture-notes-content strong {
+                font-weight: 700 !important;
+                color: #4f46e5 !important;
+            }
+            
+            body.dark-mode .lecture-notes-content strong {
+                color: #a78bfa !important;
+            }
+            
+            .lecture-notes-content em {
+                font-style: italic !important;
+                color: #6366f1 !important;
+            }
+            
+            body.dark-mode .lecture-notes-content em {
+                color: #c4b5fd !important;
+            }
+            
+            /* Lists - Beautiful bullets */
+            .lecture-notes-content ul {
+                margin: 20px 0 !important;
+                padding-left: 32px !important;
+            }
+            
+            .lecture-notes-content ul li {
+                margin: 12px 0 !important;
+                line-height: 1.8 !important;
+                position: relative !important;
+                list-style-type: none !important;
+            }
+            
+            .lecture-notes-content ul li::before {
+                content: "▸" !important;
+                color: #8b5cf6 !important;
+                font-weight: bold !important;
+                font-size: 20px !important;
+                position: absolute !important;
+                left: -24px !important;
+            }
+            
+            .lecture-notes-content ol {
+                margin: 20px 0 !important;
+                padding-left: 32px !important;
+                counter-reset: item !important;
+            }
+            
+            .lecture-notes-content ol li {
+                margin: 12px 0 !important;
+                line-height: 1.8 !important;
+                position: relative !important;
+                list-style: none !important;
+                counter-increment: item !important;
+            }
+            
+            .lecture-notes-content ol li::before {
+                content: counter(item) "." !important;
+                color: #8b5cf6 !important;
+                font-weight: bold !important;
+                font-size: 16px !important;
+                position: absolute !important;
+                left: -28px !important;
+            }
+            
+            /* Quiz Section - Special styling */
+            .quiz-section {
+                background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%) !important;
+                border: 2px solid #10b981 !important;
+                border-radius: 16px !important;
+                padding: 32px !important;
+                margin: 40px 0 !important;
+                box-shadow: 0 8px 24px rgba(16, 185, 129, 0.1) !important;
+            }
+            
+            body.dark-mode .quiz-section {
+                background: linear-gradient(135deg, #064e3b 0%, #065f46 100%) !important;
+                border-color: #10b981 !important;
+            }
+            
+            .quiz-question {
+                background: white !important;
+                border-left: 4px solid #8b5cf6 !important;
+                padding: 24px !important;
+                margin: 20px 0 !important;
+                border-radius: 12px !important;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+            }
+            
+            body.dark-mode .quiz-question {
+                background: #1f2937 !important;
+                border-left-color: #a78bfa !important;
+            }
+            
+            .quiz-question-number {
+                font-size: 20px !important;
+                font-weight: 700 !important;
+                color: #8b5cf6 !important;
+                margin-bottom: 12px !important;
+            }
+            
+            .quiz-option {
+                padding: 12px 16px !important;
+                margin: 10px 0 !important;
+                background: #f9fafb !important;
+                border-radius: 8px !important;
+                border: 1px solid #e5e7eb !important;
+                transition: all 0.2s !important;
+            }
+            
+            body.dark-mode .quiz-option {
+                background: #111827 !important;
+                border-color: #374151 !important;
+            }
+            
+            .quiz-answer {
+                background: #ecfdf5 !important;
+                border: 2px solid #10b981 !important;
+                padding: 16px !important;
+                margin: 16px 0 !important;
+                border-radius: 8px !important;
+                font-weight: 600 !important;
+                color: #065f46 !important;
+            }
+            
+            body.dark-mode .quiz-answer {
+                background: #064e3b !important;
+                color: #6ee7b7 !important;
+            }
+            
+            /* Code blocks */
+            .lecture-notes-content code {
+                background: #f3f4f6 !important;
+                border: 1px solid #e5e7eb !important;
+                border-radius: 6px !important;
+                padding: 3px 8px !important;
+                font-family: 'Courier New', monospace !important;
+                font-size: 15px !important;
+                color: #dc2626 !important;
+            }
+            
+            body.dark-mode .lecture-notes-content code {
+                background: #1f2937 !important;
+                border-color: #374151 !important;
+                color: #fca5a5 !important;
+            }
+            
+            .lecture-notes-content pre {
+                background: #1f2937 !important;
+                border-radius: 12px !important;
+                padding: 24px !important;
+                margin: 24px 0 !important;
+                overflow-x: auto !important;
+                border: 1px solid #374151 !important;
+            }
+            
+            .lecture-notes-content pre code {
+                background: transparent !important;
+                border: none !important;
+                color: #e5e7eb !important;
+                font-size: 14px !important;
+                padding: 0 !important;
+            }
+            
+            /* Blockquotes - Special call-outs */
+            .lecture-notes-content blockquote {
+                border-left: 5px solid #fbbf24 !important;
+                background: #fef3c7 !important;
+                padding: 20px 24px !important;
+                margin: 24px 0 !important;
+                border-radius: 8px !important;
+                font-style: italic !important;
+                color: #78350f !important;
+            }
+            
+            body.dark-mode .lecture-notes-content blockquote {
+                background: #78350f !important;
+                color: #fef3c7 !important;
+            }
+            
+            /* Horizontal rule */
+            .lecture-notes-content hr {
+                border: none !important;
+                height: 2px !important;
+                background: linear-gradient(to right, transparent, #8b5cf6, transparent) !important;
+                margin: 40px 0 !important;
+            }
+            
+            /* Section badges */
+            .section-badge {
+                display: inline-block !important;
+                background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
+                color: white !important;
+                padding: 8px 16px !important;
+                border-radius: 20px !important;
+                font-size: 14px !important;
+                font-weight: 600 !important;
+                margin: 8px 4px !important;
+                box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3) !important;
+            }
+            
+            /* Mobile optimizations for lecture notes */
+            @media (max-width: 768px) {
+                #lectureNotesBox {
+                    padding: 24px 16px !important;
+                }
+                
+                .lecture-notes-content {
+                    font-size: 16px !important;
+                }
+                
+                .lecture-notes-content h1 {
+                    font-size: 28px !important;
+                    margin: 32px 0 16px 0 !important;
+                }
+                
+                .lecture-notes-content h2 {
+                    font-size: 24px !important;
+                    margin: 28px 0 14px 0 !important;
+                }
+                
+                .lecture-notes-content h3 {
+                    font-size: 21px !important;
+                    margin: 24px 0 12px 0 !important;
+                }
+                
+                .lecture-notes-content h4 {
+                    font-size: 19px !important;
+                    margin: 20px 0 10px 0 !important;
+                }
+                
+                .quiz-section {
+                    padding: 20px !important;
+                    margin: 24px 0 !important;
+                }
+                
+                .quiz-question {
+                    padding: 16px !important;
+                }
             }
             
             /* Fix result wrapper on mobile */
@@ -3766,9 +4073,26 @@ Click OK to open Settings, or Cancel to retry later.`;
             
             // Show loading state
             lectureNotesWrapper.style.display = 'block';
-            lectureNotesBox.innerHTML = '<div style="text-align: center; padding: 40px;"><span class="spinner"></span><br><br>🤖 AI is analyzing your transcript and researching topics...<br><small>This may take 30-60 seconds</small></div>';
+            lectureNotesBox.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <span class="spinner"></span>
+                    <br><br>
+                    <strong style="font-size: 20px;">🎓 Generating Comprehensive Lecture Notes...</strong>
+                    <br><br>
+                    <p style="font-size: 16px; color: #6366f1;">
+                        OpenAI GPT-OSS-20B is creating detailed notes with quiz questions
+                    </p>
+                    <br>
+                    <div style="background: #f3f4f6; border-radius: 12px; padding: 20px; margin: 20px auto; max-width: 500px;">
+                        <p style="margin: 8px 0;">📝 Analyzing transcript in depth...</p>
+                        <p style="margin: 8px 0;">🧠 Generating 6000-8000 word notes...</p>
+                        <p style="margin: 8px 0;">❓ Creating comprehensive quiz...</p>
+                    </div>
+                    <small style="color: #6b7280;">⏱️ This may take 2-4 minutes for maximum quality</small>
+                </div>
+            `;
             
-            showToast('🤖 Generating AI lecture notes with web research...', 'info');
+            showToast('🎓 Generating comprehensive lecture notes (2-4 minutes)...', 'info');
             
             try {
                 const response = await fetch(`${colabEndpoint}/generate-lecture-notes`, {
@@ -3795,9 +4119,10 @@ Click OK to open Settings, or Cancel to retry later.`;
                     
                     // Update word count
                     const wordCount = data.lecture_notes.split(/\s+/).length;
-                    document.getElementById('notesWordCount').textContent = `${wordCount} words`;
+                    const estimatedPages = Math.ceil(wordCount / 400); // ~400 words per page
+                    document.getElementById('notesWordCount').textContent = `${wordCount} words (~${estimatedPages} pages)`;
                     
-                    showToast('✅ AI lecture notes generated successfully!', 'success');
+                    showToast(`✅ Generated ${wordCount} words of comprehensive notes with quiz!`, 'success');
                     
                     if (data.key_topics && data.key_topics.length > 0) {
                         console.log('📚 Key topics identified:', data.key_topics);
@@ -3831,17 +4156,114 @@ Click OK to open Settings, or Cancel to retry later.`;
         }
         
         function formatLectureNotes(notes) {
-            // Simple markdown-like formatting
-            let formatted = notes
-                .replace(/^# (.+)$/gm, '<h2 style="color: #6366f1; margin-top: 25px; margin-bottom: 15px;">$1</h2>')
-                .replace(/^## (.+)$/gm, '<h3 style="color: #8b5cf6; margin-top: 20px; margin-bottom: 10px;">$1</h3>')
-                .replace(/^### (.+)$/gm, '<h4 style="color: #a78bfa; margin-top: 15px; margin-bottom: 8px;">$1</h4>')
-                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                .replace(/^- (.+)$/gm, '<li style="margin-left: 20px;">$1</li>')
-                .replace(/\n\n/g, '<br><br>');
+            // Enhanced markdown formatting with beautiful styling
+            let formatted = notes;
             
-            return `<div style="line-height: 1.8; font-size: 15px;">${formatted}</div>`;
+            // Escape HTML first
+            formatted = formatted.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            // Convert markdown headings (must be done in order: h1, h2, h3, h4)
+            formatted = formatted.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+            formatted = formatted.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            formatted = formatted.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            formatted = formatted.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+            
+            // Horizontal rules
+            formatted = formatted.replace(/^---$/gm, '<hr>');
+            formatted = formatted.replace(/^___$/gm, '<hr>');
+            
+            // Blockquotes
+            formatted = formatted.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+            
+            // Code blocks (``` code ```)
+            formatted = formatted.replace(/```([\\s\\S]*?)```/g, '<pre><code>$1</code></pre>');
+            
+            // Inline code (`code`)
+            formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+            
+            // Bold (**text** or __text__)
+            formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            formatted = formatted.replace(/__(.+?)__/g, '<strong>$1</strong>');
+            
+            // Italic (*text* or _text_)
+            formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+            formatted = formatted.replace(/_([^_]+)_/g, '<em>$1</em>');
+            
+            // Numbered lists (1. item)
+            formatted = formatted.replace(/^(\\d+\\.) (.+)$/gm, '<ol-item>$2</ol-item>');
+            formatted = formatted.replace(/((?:<ol-item>.*?<\\/ol-item>\\n?)+)/g, '<ol>$1</ol>');
+            formatted = formatted.replace(/<ol-item>/g, '<li>').replace(/<\\/ol-item>/g, '</li>');
+            
+            // Unordered lists (- item or * item)
+            formatted = formatted.replace(/^[\\-\\*] (.+)$/gm, '<ul-item>$1</ul-item>');
+            formatted = formatted.replace(/((?:<ul-item>.*?<\\/ul-item>\\n?)+)/g, '<ul>$1</ul>');
+            formatted = formatted.replace(/<ul-item>/g, '<li>').replace(/<\\/ul-item>/g, '</li>');
+            
+            // Special quiz formatting
+            // Detect quiz sections by looking for "QUIZ" or "ASSESSMENT" headings
+            formatted = formatted.replace(/(## .*?(?:QUIZ|ASSESSMENT|Questions).*?<\\/h2>)/gi, (match) => {
+                return match + '<div class="quiz-section-marker"></div>';
+            });
+            
+            // Format quiz questions (Q1., Q2., etc.)
+            formatted = formatted.replace(/^Q(\\d+)\\. (.+)$/gm, (match, num, question) => {
+                return `<div class="quiz-question"><div class="quiz-question-number">Question ${num}</div><p>${question}</p>`;
+            });
+            
+            // Format quiz options (A), B), C), D))
+            formatted = formatted.replace(/^   ([A-D])\\) (.+)$/gm, '<div class="quiz-option"><strong>$1)</strong> $2</div>');
+            
+            // Format correct answers (**Correct Answer**: X)
+            formatted = formatted.replace(/\\*\\*Correct Answer\\*\\*: ([A-D]) - (.+)/gi, (match, letter, explanation) => {
+                return `<div class="quiz-answer">✅ <strong>Correct Answer: ${letter}</strong><br>${explanation}</div></div>`;
+            });
+            
+            // Wrap quiz sections
+            let inQuiz = false;
+            let lines = formatted.split('\\n');
+            let result = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+                
+                if (line.includes('quiz-section-marker')) {
+                    if (!inQuiz) {
+                        result.push('<div class="quiz-section">');
+                        inQuiz = true;
+                    }
+                    line = line.replace(/<div class="quiz-section-marker"><\\/div>/g, '');
+                }
+                
+                // Close quiz section at next major heading (if not quiz-related)
+                if (inQuiz && line.match(/<h[12]>/) && !line.match(/quiz|assessment|question|answer/i)) {
+                    result.push('</div>');
+                    inQuiz = false;
+                }
+                
+                result.push(line);
+            }
+            
+            if (inQuiz) {
+                result.push('</div>'); // Close any open quiz section
+            }
+            
+            formatted = result.join('\\n');
+            
+            // Paragraphs (double line breaks)
+            formatted = formatted.replace(/\\n\\n/g, '</p><p>');
+            formatted = '<p>' + formatted + '</p>';
+            
+            // Clean up empty paragraphs
+            formatted = formatted.replace(/<p>\\s*<\\/p>/g, '');
+            formatted = formatted.replace(/<p>(<h[1-4]>)/g, '$1');
+            formatted = formatted.replace(/(<\\/h[1-4]>)<\\/p>/g, '$1');
+            formatted = formatted.replace(/<p>(<div)/g, '$1');
+            formatted = formatted.replace(/(<\\/div>)<\\/p>/g, '$1');
+            formatted = formatted.replace(/<p>(<ul|<ol|<blockquote|<pre|<hr)/g, '$1');
+            formatted = formatted.replace(/(<\\/ul>|<\\/ol>|<\\/blockquote>|<\\/pre>|<hr>)<\\/p>/g, '$1');
+            
+            // Wrap in content div with beautiful styling class
+            return `<div class="lecture-notes-content">${formatted}</div>`;
         }
         
         function copyLectureNotes() {
