@@ -4231,8 +4231,19 @@ Click OK to open Settings, or Cancel to retry later.`;
                 if (data.success) {
                     currentLectureNotes = data.lecture_notes;
                     
+                    console.log('📚 Formatting lecture notes...');
+                    console.log('   Raw notes length:', data.lecture_notes.length);
+                    
                     // Display formatted lecture notes
-                    lectureNotesBox.innerHTML = formatLectureNotes(data.lecture_notes);
+                    const formattedNotes = formatLectureNotes(data.lecture_notes);
+                    lectureNotesBox.innerHTML = formattedNotes;
+                    
+                    console.log('📚 Formatted notes length:', formattedNotes.length);
+                    console.log('📚 LectureNotesBox innerHTML length:', lectureNotesBox.innerHTML.length);
+                    
+                    // ENSURE the lecture notes wrapper is visible
+                    lectureNotesWrapper.style.display = 'block';
+                    console.log('📚 Lecture notes wrapper made visible');
                     
                     // Update word count
                     const wordCount = data.lecture_notes.split(/\s+/).length;
@@ -4372,6 +4383,9 @@ Click OK to open Settings, or Cancel to retry later.`;
             
             // Clean up empty paragraphs
             formatted = formatted.replace(/<p>\s*<\/p>/g, '');
+            
+            // IMPORTANT: Wrap in lecture-notes-content div for PDF export
+            formatted = '<div class="lecture-notes-content">' + formatted + '</div>';
             formatted = formatted.replace(/<p>(<h[1-4]>)/g, '$1');
             formatted = formatted.replace(/(<\/h[1-4]>)<\/p>/g, '$1');
             formatted = formatted.replace(/<p>(<div)/g, '$1');
@@ -4410,6 +4424,10 @@ Click OK to open Settings, or Cancel to retry later.`;
         }
         
         async function downloadLectureNotesPDF() {
+            console.log('📄 PDF Export - Starting...');
+            console.log('   Current lecture notes exists:', !!currentLectureNotes);
+            console.log('   Current lecture notes length:', currentLectureNotes ? currentLectureNotes.length : 0);
+            
             if (!currentLectureNotes) {
                 showToast('❌ No lecture notes to download', 'error');
                 return;
@@ -4425,14 +4443,16 @@ Click OK to open Settings, or Cancel to retry later.`;
                 console.log('📦 Lecture notes box found:', !!lectureNotesBox);
                 
                 if (!lectureNotesBox) {
-                    throw new Error('Lecture notes box not found');
+                    throw new Error('Lecture notes box not found in DOM');
                 }
                 
                 // Get the actual content
                 let contentToExport = lectureNotesBox.innerHTML;
-                console.log('📝 Content length:', contentToExport.length, 'characters');
+                console.log('📝 Raw content length:', contentToExport.length, 'characters');
+                console.log('📝 Content preview:', contentToExport.substring(0, 200));
                 
                 if (contentToExport.length < 100) {
+                    console.error('❌ Content is too short!');
                     throw new Error('Lecture notes appear to be empty. Please generate notes first.');
                 }
                 
@@ -4453,19 +4473,26 @@ Click OK to open Settings, or Cancel to retry later.`;
                 document.body.appendChild(pdfContainer);
                 
                 console.log('📦 PDF container created and added to DOM');
+                console.log('📦 Container has children:', pdfContainer.children.length);
                 
                 // Apply comprehensive styling to PDF content
                 const applyPDFStyling = (container) => {
+                    console.log('🎨 Applying PDF styling...');
+                    
                     // Base container styling
                     container.style.color = '#1f2937';
                     container.style.fontSize = '14px';
                     container.style.lineHeight = '1.7';
                     
-                    // Find and style lecture-notes-content div
-                    const lectureContent = container.querySelector('.lecture-notes-content') || container;
+                    // Find the lecture-notes-content div (created by formatLectureNotes)
+                    const lectureContent = container.querySelector('.lecture-notes-content');
+                    const targetElement = lectureContent || container;
+                    
+                    console.log('🎯 Target element for styling:', !!lectureContent ? '.lecture-notes-content found' : 'Using container directly');
+                    console.log('🎯 Target element children:', targetElement.children.length);
                     
                     // H1 styling
-                    lectureContent.querySelectorAll('h1').forEach(el => {
+                    targetElement.querySelectorAll('h1').forEach(el => {
                         el.style.fontSize = '28px';
                         el.style.fontWeight = '800';
                         el.style.color = '#1e40af';
@@ -4475,7 +4502,7 @@ Click OK to open Settings, or Cancel to retry later.`;
                     });
                     
                     // H2 styling
-                    lectureContent.querySelectorAll('h2').forEach(el => {
+                    targetElement.querySelectorAll('h2').forEach(el => {
                         el.style.fontSize = '22px';
                         el.style.fontWeight = '700';
                         el.style.color = '#1e3a8a';
@@ -4485,7 +4512,7 @@ Click OK to open Settings, or Cancel to retry later.`;
                     });
                     
                     // H3 styling
-                    lectureContent.querySelectorAll('h3').forEach(el => {
+                    targetElement.querySelectorAll('h3').forEach(el => {
                         el.style.fontSize = '18px';
                         el.style.fontWeight = '600';
                         el.style.color = '#1e40af';
@@ -4493,7 +4520,7 @@ Click OK to open Settings, or Cancel to retry later.`;
                     });
                     
                     // H4 styling
-                    lectureContent.querySelectorAll('h4').forEach(el => {
+                    targetElement.querySelectorAll('h4').forEach(el => {
                         el.style.fontSize = '16px';
                         el.style.fontWeight = '600';
                         el.style.color = '#2563eb';
@@ -4501,7 +4528,7 @@ Click OK to open Settings, or Cancel to retry later.`;
                     });
                     
                     // Paragraph styling
-                    lectureContent.querySelectorAll('p').forEach(el => {
+                    targetElement.querySelectorAll('p').forEach(el => {
                         el.style.margin = '10px 0';
                         el.style.lineHeight = '1.7';
                         el.style.textAlign = 'justify';
@@ -4509,30 +4536,30 @@ Click OK to open Settings, or Cancel to retry later.`;
                     });
                     
                     // List styling
-                    lectureContent.querySelectorAll('ul, ol').forEach(el => {
+                    targetElement.querySelectorAll('ul, ol').forEach(el => {
                         el.style.margin = '12px 0';
                         el.style.paddingLeft = '24px';
                     });
                     
-                    lectureContent.querySelectorAll('li').forEach(el => {
+                    targetElement.querySelectorAll('li').forEach(el => {
                         el.style.margin = '8px 0';
                         el.style.lineHeight = '1.6';
                         el.style.color = '#1f2937';
                     });
                     
                     // Strong and em
-                    lectureContent.querySelectorAll('strong').forEach(el => {
+                    targetElement.querySelectorAll('strong').forEach(el => {
                         el.style.fontWeight = '700';
                         el.style.color = '#1e40af';
                     });
                     
-                    lectureContent.querySelectorAll('em').forEach(el => {
+                    targetElement.querySelectorAll('em').forEach(el => {
                         el.style.fontStyle = 'italic';
                         el.style.color = '#2563eb';
                     });
                     
                     // Code styling
-                    lectureContent.querySelectorAll('code').forEach(el => {
+                    targetElement.querySelectorAll('code').forEach(el => {
                         el.style.background = '#f3f4f6';
                         el.style.padding = '2px 6px';
                         el.style.borderRadius = '4px';
@@ -4542,7 +4569,7 @@ Click OK to open Settings, or Cancel to retry later.`;
                     });
                     
                     // Quiz sections
-                    lectureContent.querySelectorAll('.quiz-section').forEach(el => {
+                    targetElement.querySelectorAll('.quiz-section').forEach(el => {
                         el.style.background = '#f0fdf4';
                         el.style.border = '2px solid #10b981';
                         el.style.borderRadius = '12px';
@@ -4550,7 +4577,7 @@ Click OK to open Settings, or Cancel to retry later.`;
                         el.style.margin = '16px 0';
                     });
                     
-                    lectureContent.querySelectorAll('.quiz-question').forEach(el => {
+                    targetElement.querySelectorAll('.quiz-question').forEach(el => {
                         el.style.background = 'white';
                         el.style.borderLeft = '4px solid #3b82f6';
                         el.style.padding = '12px';
@@ -4558,14 +4585,14 @@ Click OK to open Settings, or Cancel to retry later.`;
                         el.style.borderRadius = '8px';
                     });
                     
-                    lectureContent.querySelectorAll('.quiz-question-number').forEach(el => {
+                    targetElement.querySelectorAll('.quiz-question-number').forEach(el => {
                         el.style.fontSize = '16px';
                         el.style.fontWeight = '700';
                         el.style.color = '#3b82f6';
                         el.style.marginBottom = '8px';
                     });
                     
-                    lectureContent.querySelectorAll('.quiz-option').forEach(el => {
+                    targetElement.querySelectorAll('.quiz-option').forEach(el => {
                         el.style.padding = '8px 12px';
                         el.style.margin = '6px 0';
                         el.style.background = '#f9fafb';
@@ -4573,7 +4600,7 @@ Click OK to open Settings, or Cancel to retry later.`;
                         el.style.border = '1px solid #e5e7eb';
                     });
                     
-                    lectureContent.querySelectorAll('.quiz-answer').forEach(el => {
+                    targetElement.querySelectorAll('.quiz-answer').forEach(el => {
                         el.style.background = '#ecfdf5';
                         el.style.border = '2px solid #10b981';
                         el.style.padding = '12px';
@@ -4584,7 +4611,7 @@ Click OK to open Settings, or Cancel to retry later.`;
                     });
                     
                     // HR
-                    lectureContent.querySelectorAll('hr').forEach(el => {
+                    targetElement.querySelectorAll('hr').forEach(el => {
                         el.style.border = 'none';
                         el.style.height = '2px';
                         el.style.background = '#e5e7eb';
@@ -4592,7 +4619,7 @@ Click OK to open Settings, or Cancel to retry later.`;
                     });
                     
                     // Blockquote
-                    lectureContent.querySelectorAll('blockquote').forEach(el => {
+                    targetElement.querySelectorAll('blockquote').forEach(el => {
                         el.style.borderLeft = '5px solid #fbbf24';
                         el.style.background = '#fef3c7';
                         el.style.padding = '12px 16px';
