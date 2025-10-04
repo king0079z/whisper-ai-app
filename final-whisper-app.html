@@ -4176,7 +4176,7 @@ Click OK to open Settings, or Cancel to retry later.`;
             formatted = formatted.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
             
             // Code blocks (``` code ```)
-            formatted = formatted.replace(/```([\\s\\S]*?)```/g, '<pre><code>$1</code></pre>');
+            formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
             
             // Inline code (`code`)
             formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -4190,37 +4190,37 @@ Click OK to open Settings, or Cancel to retry later.`;
             formatted = formatted.replace(/_([^_]+)_/g, '<em>$1</em>');
             
             // Numbered lists (1. item)
-            formatted = formatted.replace(/^(\\d+\\.) (.+)$/gm, '<ol-item>$2</ol-item>');
-            formatted = formatted.replace(/((?:<ol-item>.*?<\\/ol-item>\\n?)+)/g, '<ol>$1</ol>');
-            formatted = formatted.replace(/<ol-item>/g, '<li>').replace(/<\\/ol-item>/g, '</li>');
+            formatted = formatted.replace(/^(\d+\.) (.+)$/gm, '<ol-item>$2</ol-item>');
+            formatted = formatted.replace(/((?:<ol-item>.*?<\/ol-item>\n?)+)/g, '<ol>$1</ol>');
+            formatted = formatted.replace(/<ol-item>/g, '<li>').replace(/<\/ol-item>/g, '</li>');
             
             // Unordered lists (- item or * item)
-            formatted = formatted.replace(/^[\\-\\*] (.+)$/gm, '<ul-item>$1</ul-item>');
-            formatted = formatted.replace(/((?:<ul-item>.*?<\\/ul-item>\\n?)+)/g, '<ul>$1</ul>');
-            formatted = formatted.replace(/<ul-item>/g, '<li>').replace(/<\\/ul-item>/g, '</li>');
+            formatted = formatted.replace(/^[\-\*] (.+)$/gm, '<ul-item>$1</ul-item>');
+            formatted = formatted.replace(/((?:<ul-item>.*?<\/ul-item>\n?)+)/g, '<ul>$1</ul>');
+            formatted = formatted.replace(/<ul-item>/g, '<li>').replace(/<\/ul-item>/g, '</li>');
             
             // Special quiz formatting
             // Detect quiz sections by looking for "QUIZ" or "ASSESSMENT" headings
-            formatted = formatted.replace(/(## .*?(?:QUIZ|ASSESSMENT|Questions).*?<\\/h2>)/gi, (match) => {
+            formatted = formatted.replace(/(## .*?(?:QUIZ|ASSESSMENT|Questions).*?<\/h2>)/gi, (match) => {
                 return match + '<div class="quiz-section-marker"></div>';
             });
             
             // Format quiz questions (Q1., Q2., etc.)
-            formatted = formatted.replace(/^Q(\\d+)\\. (.+)$/gm, (match, num, question) => {
+            formatted = formatted.replace(/^Q(\d+)\. (.+)$/gm, (match, num, question) => {
                 return `<div class="quiz-question"><div class="quiz-question-number">Question ${num}</div><p>${question}</p>`;
             });
             
             // Format quiz options (A), B), C), D))
-            formatted = formatted.replace(/^   ([A-D])\\) (.+)$/gm, '<div class="quiz-option"><strong>$1)</strong> $2</div>');
+            formatted = formatted.replace(/^   ([A-D])\) (.+)$/gm, '<div class="quiz-option"><strong>$1)</strong> $2</div>');
             
             // Format correct answers (**Correct Answer**: X)
-            formatted = formatted.replace(/\\*\\*Correct Answer\\*\\*: ([A-D]) - (.+)/gi, (match, letter, explanation) => {
+            formatted = formatted.replace(/\*\*Correct Answer\*\*: ([A-D]) - (.+)/gi, (match, letter, explanation) => {
                 return `<div class="quiz-answer">✅ <strong>Correct Answer: ${letter}</strong><br>${explanation}</div></div>`;
             });
             
             // Wrap quiz sections
             let inQuiz = false;
-            let lines = formatted.split('\\n');
+            let lines = formatted.split('\n');
             let result = [];
             
             for (let i = 0; i < lines.length; i++) {
@@ -4231,7 +4231,7 @@ Click OK to open Settings, or Cancel to retry later.`;
                         result.push('<div class="quiz-section">');
                         inQuiz = true;
                     }
-                    line = line.replace(/<div class="quiz-section-marker"><\\/div>/g, '');
+                    line = line.replace(/<div class="quiz-section-marker"><\/div>/g, '');
                 }
                 
                 // Close quiz section at next major heading (if not quiz-related)
@@ -4247,20 +4247,20 @@ Click OK to open Settings, or Cancel to retry later.`;
                 result.push('</div>'); // Close any open quiz section
             }
             
-            formatted = result.join('\\n');
+            formatted = result.join('\n');
             
             // Paragraphs (double line breaks)
-            formatted = formatted.replace(/\\n\\n/g, '</p><p>');
+            formatted = formatted.replace(/\n\n/g, '</p><p>');
             formatted = '<p>' + formatted + '</p>';
             
             // Clean up empty paragraphs
-            formatted = formatted.replace(/<p>\\s*<\\/p>/g, '');
+            formatted = formatted.replace(/<p>\s*<\/p>/g, '');
             formatted = formatted.replace(/<p>(<h[1-4]>)/g, '$1');
-            formatted = formatted.replace(/(<\\/h[1-4]>)<\\/p>/g, '$1');
+            formatted = formatted.replace(/(<\/h[1-4]>)<\/p>/g, '$1');
             formatted = formatted.replace(/<p>(<div)/g, '$1');
-            formatted = formatted.replace(/(<\\/div>)<\\/p>/g, '$1');
+            formatted = formatted.replace(/(<\/div>)<\/p>/g, '$1');
             formatted = formatted.replace(/<p>(<ul|<ol|<blockquote|<pre|<hr)/g, '$1');
-            formatted = formatted.replace(/(<\\/ul>|<\\/ol>|<\\/blockquote>|<\\/pre>|<hr>)<\\/p>/g, '$1');
+            formatted = formatted.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/pre>|<hr>)<\/p>/g, '$1');
             
             // Wrap in content div with beautiful styling class
             return `<div class="lecture-notes-content">${formatted}</div>`;
