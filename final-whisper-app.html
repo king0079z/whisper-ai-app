@@ -4438,7 +4438,15 @@ Click OK to open Settings, or Cancel to retry later.`;
                 return;
             }
             
-            showToast('📄 Generating PDF... Please wait 10-20 seconds', 'info');
+            // Detect mobile device
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+            console.log('📱 Mobile device detected:', isMobile);
+            
+            if (isMobile) {
+                showToast('📱 Generating mobile-optimized PDF... Please wait', 'info');
+            } else {
+                showToast('📄 Generating PDF... Please wait 10-20 seconds', 'info');
+            }
             
             try {
                 console.log('🔍 Starting PDF generation process...');
@@ -4465,14 +4473,17 @@ Click OK to open Settings, or Cancel to retry later.`;
                 const pdfContainer = document.createElement('div');
                 pdfContainer.id = 'pdf-export-container';
                 
-                // A4 proportions with proper content width
+                // Mobile-optimized or desktop settings
+                const containerWidth = isMobile ? '600px' : '800px';
+                const containerPadding = isMobile ? '30px 40px' : '50px 70px';
+                
                 pdfContainer.style.cssText = `
                     position: absolute;
                     left: -9999px;
                     top: 0;
-                    width: 800px;
+                    width: ${containerWidth};
                     min-height: 1000px;
-                    padding: 50px 70px;
+                    padding: ${containerPadding};
                     margin: 0;
                     background: white;
                     color: #000000;
@@ -4487,6 +4498,7 @@ Click OK to open Settings, or Cancel to retry later.`;
                 
                 console.log('📦 Container innerHTML length:', pdfContainer.innerHTML.length);
                 console.log('📦 Container text content length:', pdfContainer.textContent.length);
+                console.log('📦 Container width:', containerWidth);
                 
                 console.log('📦 PDF container created and added to DOM');
                 console.log('📦 Container has children:', pdfContainer.children.length);
@@ -4691,22 +4703,32 @@ Click OK to open Settings, or Cancel to retry later.`;
                 applyPDFStyling(pdfContainer);
                 console.log('✅ PDF styling applied');
                 
-                // Wait a moment for rendering
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // Wait a moment for rendering (longer for mobile)
+                const waitTime = isMobile ? 300 : 100;
+                await new Promise(resolve => setTimeout(resolve, waitTime));
                 
                 console.log('📸 Starting html2canvas capture...');
                 
-                // Capture with html2canvas
+                // Capture with html2canvas - mobile-optimized settings
                 console.log('📏 Container dimensions:', pdfContainer.scrollWidth, 'x', pdfContainer.scrollHeight);
                 
+                // Mobile uses lower quality for memory constraints
+                const canvasScale = isMobile ? 1.5 : 2;
+                const canvasLogging = !isMobile; // Disable logging on mobile for performance
+                
+                console.log('📱 Canvas scale:', canvasScale);
+                
                 const canvas = await html2canvas(pdfContainer, {
-                    scale: 2,
+                    scale: canvasScale,
                     useCORS: true,
                     allowTaint: true,
-                    logging: true,
+                    logging: canvasLogging,
                     backgroundColor: '#ffffff',
                     width: pdfContainer.scrollWidth,
-                    height: pdfContainer.scrollHeight
+                    height: pdfContainer.scrollHeight,
+                    removeContainer: false,
+                    imageTimeout: 0,
+                    foreignObjectRendering: false
                 });
                 
                 console.log('✅ Canvas captured:', canvas.width, 'x', canvas.height);
@@ -4740,8 +4762,10 @@ Click OK to open Settings, or Cancel to retry later.`;
                 console.log('📐 PDF dimensions:', imgWidth, 'mm x', imgHeight, 'mm');
                 console.log('📐 Canvas dimensions:', canvas.width, 'x', canvas.height, 'px');
                 
-                // Convert to high-quality image
-                const imgData = canvas.toDataURL('image/jpeg', 0.92);
+                // Convert to image (lower quality for mobile)
+                const imageQuality = isMobile ? 0.85 : 0.92;
+                const imgData = canvas.toDataURL('image/jpeg', imageQuality);
+                console.log('📸 Image quality:', imageQuality);
                 console.log('📸 Image data URL length:', imgData.length);
                 
                 // Add pages with content
