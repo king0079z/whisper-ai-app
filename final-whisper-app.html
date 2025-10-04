@@ -3021,6 +3021,123 @@ Click OK to open Settings, or Cancel to retry later.`;
 
         // ✨ Server-Side File Splitting for Large Files (>100MB)
         
+        // 📊 Polling system for background transcription with session persistence
+        let pollingInterval = null;
+        let currentSessionId = null;
+
+        async function startProgressPolling(sessionId) {
+            console.log(`📊 Starting polling for session: ${sessionId}`);
+            currentSessionId = sessionId;
+            
+            // Store in localStorage for persistence (survives phone restart!)
+            localStorage.setItem('active_transcription_session', sessionId);
+            localStorage.setItem('session_start_time', Date.now());
+            
+            // Poll server every 3 seconds for real-time updates
+            pollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${colabEndpoint}/transcribe-large-status/${sessionId}`);
+                    
+                    if (!response.ok) {
+                        console.warn('Session not found on server');
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    if (!data.success) return;
+                    
+                    const session = data.session;
+                    console.log(`📊 Server status: ${session.status} - ${session.phase}`);
+                    
+                    // Update main status from server
+                    updateSmartSplitStatus(session.status, session.phase);
+                    
+                    // Update each part with REAL server progress
+                    for (let i = 1; i <= 3; i++) {
+                        const part = session.parts[i.toString()];
+                        if (part) {
+                            let statusText = part.status;
+                            if (part.status === 'complete') {
+                                statusText = '✅ Complete';
+                            } else if (part.status === 'failed') {
+                                statusText = '❌ Failed: ' + part.error;
+                            } else if (part.status === 'transcribing') {
+                                statusText = '🎙️ Transcribing...';
+                            } else if (part.status === 'splitting') {
+                                statusText = '🔪 Splitting...';
+                            } else if (part.status === 'waiting') {
+                                statusText = '⏳ Waiting...';
+                            }
+                            
+                            updatePartProgress(i, part.progress, statusText);
+                        }
+                    }
+                    
+                    // Check if complete
+                    if (session.status === 'complete') {
+                        clearInterval(pollingInterval);
+                        localStorage.removeItem('active_transcription_session');
+                        
+                        console.log(`✅ Transcription complete! Length: ${session.transcript.length} chars`);
+                        
+                        // Show all parts complete
+                        updatePartProgress(1, 100, '✅ Complete');
+                        updatePartProgress(2, 100, '✅ Complete');
+                        updatePartProgress(3, 100, '✅ Complete');
+                        
+                        // Display final result
+                        displayResult(session.transcript, {
+                            filename: session.filename,
+                            language: session.language,
+                            parts: 3,
+                            processing_time: session.processing_time,
+                            method: 'server-side-splitting'
+                        });
+                        
+                        saveToHistory(session.filename, session.transcript, { 
+                            parts: 3,
+                            size: session.file_size_mb + ' MB',
+                            time: session.processing_time,
+                            method: 'server-splitting'
+                        });
+                        
+                        showToast('✅ Large file transcription complete!', 'success');
+                        
+                        setTimeout(() => {
+                            document.getElementById('smartSplitModal').style.display = 'none';
+                            document.getElementById('transcribeBtn').disabled = false;
+                            document.getElementById('transcribeBtnText').innerHTML = '🚀 Start Transcription';
+                        }, 3000);
+                    }
+                    
+                    // Check if error
+                    if (session.status === 'error') {
+                        clearInterval(pollingInterval);
+                        localStorage.removeItem('active_transcription_session');
+                        showToast('❌ Error: ' + (session.error || session.phase), 'error');
+                        updateSmartSplitStatus('error', '❌ ' + (session.error || session.phase));
+                        
+                        // Mark all parts as failed
+                        for (let i = 1; i <= 3; i++) {
+                            updatePartProgress(i, 0, '❌ Failed');
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Polling error:', error);
+                    // Don't stop polling on temporary network errors - keep trying
+                }
+            }, 3000); // Poll every 3 seconds
+        }
+
+        function stopProgressPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+            localStorage.removeItem('active_transcription_session');
+        }
+        
         async function handleLargeFileTranscription(file, fileSizeMB) {
             console.log(`🔪 Large file detected (${fileSizeMB.toFixed(2)} MB) - Using SERVER-SIDE splitting...`);
             
@@ -3028,17 +3145,10 @@ Click OK to open Settings, or Cancel to retry later.`;
             showSmartSplitUI(file, fileSizeMB);
             
             try {
-                // Calculate estimated times
-                const estimatedAudioMinutes = Math.floor(fileSizeMB * 0.6);
-                const estimatedTotalMinutes = Math.floor(estimatedAudioMinutes / 172 * 25);
-                const part1Time = Math.floor(estimatedTotalMinutes / 3);
-                const part2Time = Math.floor(estimatedTotalMinutes * 2 / 3);
-                const part3Time = estimatedTotalMinutes;
-                
-                updateSmartSplitStatus('uploading', `📤 Uploading file to server... (~2-3 minutes)`);
-                updatePartProgress(1, 5, `Waiting... (starts in ~3 min)`);
-                updatePartProgress(2, 0, `Waiting... (starts in ~${part1Time} min)`);
-                updatePartProgress(3, 0, `Waiting... (starts in ~${part2Time} min)`);
+                updateSmartSplitStatus('uploading', `📤 Uploading file to server...`);
+                updatePartProgress(1, 5, 'Uploading...');
+                updatePartProgress(2, 0, 'Waiting...');
+                updatePartProgress(3, 0, 'Waiting...');
                 
                 // Create FormData
                 const formData = new FormData();
@@ -3047,37 +3157,11 @@ Click OK to open Settings, or Cancel to retry later.`;
                 
                 console.log(`📤 Uploading to ${colabEndpoint}/transcribe-large...`);
                 
-                // Upload to server
-                updatePartProgress(1, 20, 'Server received file...');
-                updateSmartSplitStatus('processing', `🔄 Server is processing... (~${estimatedTotalMinutes} minutes total)`);
-                
-                // Show periodic updates while waiting
-                const startTime = Date.now();
-                const statusInterval = setInterval(() => {
-                    const elapsed = Math.floor((Date.now() - startTime) / 60000); // minutes
-                    const remaining = Math.max(0, estimatedTotalMinutes - elapsed);
-                    
-                    if (elapsed < part1Time) {
-                        updateSmartSplitStatus('processing', `🔄 Part 1 processing... (~${remaining} min remaining)`);
-                        updatePartProgress(1, Math.min(90, 20 + elapsed * 3), 'Transcribing...');
-                    } else if (elapsed < part2Time) {
-                        updateSmartSplitStatus('processing', `🔄 Part 2 processing... (~${remaining} min remaining)`);
-                        updatePartProgress(1, 100, '✅ Complete');
-                        updatePartProgress(2, Math.min(90, 20 + (elapsed - part1Time) * 3), 'Transcribing...');
-                    } else {
-                        updateSmartSplitStatus('processing', `🔄 Part 3 processing... (~${remaining} min remaining)`);
-                        updatePartProgress(1, 100, '✅ Complete');
-                        updatePartProgress(2, 100, '✅ Complete');
-                        updatePartProgress(3, Math.min(90, 20 + (elapsed - part2Time) * 3), 'Transcribing...');
-                    }
-                }, 30000); // Update every 30 seconds
-                
+                // Upload to server - this now returns IMMEDIATELY with session_id
                 const response = await fetch(`${colabEndpoint}/transcribe-large`, {
                     method: 'POST',
                     body: formData
                 });
-                
-                clearInterval(statusInterval);
                 
                 const result = await response.json();
                 
@@ -3085,48 +3169,17 @@ Click OK to open Settings, or Cancel to retry later.`;
                     throw new Error(result.error || `Server error: ${response.status}`);
                 }
                 
-                console.log(`✅ Server completed!`);
-                console.log(`   Parts processed: ${result.parts}`);
-                console.log(`   Time: ${result.processing_time}`);
-                console.log(`   Transcript length: ${result.transcript.length} chars`);
+                console.log(`✅ Got session_id: ${result.session_id}`);
+                console.log(`📊 Status endpoint: ${result.status_endpoint}`);
+                console.log(`📱 Stored in localStorage for persistence!`);
                 
-                // Show all parts complete
-                updatePartProgress(1, 100, '✅ Complete');
-                updatePartProgress(2, 100, '✅ Complete');
-                updatePartProgress(3, 100, '✅ Complete');
-                updateSmartSplitStatus('complete', '🎉 Server completed all splitting and transcription!');
-                
-                // Display result
-                displayResult(result.transcript, {
-                    filename: file.name,
-                    language: result.language,
-                    parts: result.parts,
-                    processing_time: result.processing_time,
-                    method: 'server-side-splitting'
-                });
-                
-                saveToHistory(file.name, result.transcript, { 
-                    parts: result.parts, 
-                    size: fileSizeMB.toFixed(2) + ' MB',
-                    time: result.processing_time,
-                    method: 'server-splitting'
-                });
-                
-                showToast('✅ Large file transcription complete!', 'success');
-                
-                setTimeout(() => {
-                    document.getElementById('smartSplitModal').style.display = 'none';
-                    document.getElementById('transcribeBtn').disabled = false;
-                    document.getElementById('transcribeBtnText').innerHTML = '🚀 Start Transcription';
-                }, 3000);
+                // Start polling for real-time updates from server
+                updateSmartSplitStatus('processing', '🔄 Server is processing in background...');
+                startProgressPolling(result.session_id);
                 
             } catch (error) {
                 console.error('❌ Server-side transcription error:', error);
-                
-                // Clear status interval if it exists
-                if (typeof statusInterval !== 'undefined') {
-                    clearInterval(statusInterval);
-                }
+                stopProgressPolling();
                 
                 showToast('Error: ' + error.message, 'error');
                 updateSmartSplitStatus('error', '❌ ' + error.message);
@@ -4648,6 +4701,88 @@ ${mermaidCode}
                         e.preventDefault();
                         openHistory();
                         break;
+                }
+            }
+        });
+
+        // 📱 Resume active transcription session on page load (survives phone restart!)
+        window.addEventListener('DOMContentLoaded', async () => {
+            const activeSession = localStorage.getItem('active_transcription_session');
+            
+            if (activeSession) {
+                console.log(`🔄 Found active session in localStorage: ${activeSession}`);
+                
+                try {
+                    const response = await fetch(`${colabEndpoint}/transcribe-large-status/${activeSession}`);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        if (data.success && data.session && data.session.status !== 'complete' && data.session.status !== 'error') {
+                            console.log(`✅ Resuming session: ${activeSession}`);
+                            console.log(`   Status: ${data.session.status}`);
+                            console.log(`   Phase: ${data.session.phase}`);
+                            
+                            // Show smart split modal
+                            const modal = document.getElementById('smartSplitModal');
+                            if (modal) {
+                                modal.style.display = 'block';
+                                
+                                // Update with current session state from server
+                                const session = data.session;
+                                updateSmartSplitStatus(session.status, session.phase);
+                                
+                                // Update each part with current progress
+                                for (let i = 1; i <= 3; i++) {
+                                    const part = session.parts[i.toString()];
+                                    if (part) {
+                                        let statusText = part.status;
+                                        if (part.status === 'complete') {
+                                            statusText = '✅ Complete';
+                                        } else if (part.status === 'failed') {
+                                            statusText = '❌ Failed';
+                                        } else if (part.status === 'transcribing') {
+                                            statusText = '🎙️ Transcribing...';
+                                        } else if (part.status === 'splitting') {
+                                            statusText = '🔪 Splitting...';
+                                        } else if (part.status === 'waiting') {
+                                            statusText = '⏳ Waiting...';
+                                        }
+                                        updatePartProgress(i, part.progress, statusText);
+                                    }
+                                }
+                            }
+                            
+                            // Start polling to continue watching progress
+                            startProgressPolling(activeSession);
+                            
+                            showToast('📱 Resuming transcription session...', 'info');
+                            
+                        } else {
+                            // Session complete, error, or not found - clean up
+                            console.log('Session already complete or not active');
+                            localStorage.removeItem('active_transcription_session');
+                            
+                            // If complete, show result
+                            if (data.success && data.session && data.session.status === 'complete' && data.session.transcript) {
+                                displayResult(data.session.transcript, {
+                                    filename: data.session.filename,
+                                    language: data.session.language,
+                                    parts: 3,
+                                    method: 'server-side-splitting'
+                                });
+                                showToast('✅ Previous transcription loaded!', 'success');
+                            }
+                        }
+                    } else {
+                        // Session not found on server
+                        console.log('Session not found on server, cleaning up');
+                        localStorage.removeItem('active_transcription_session');
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Resume error:', error);
+                    localStorage.removeItem('active_transcription_session');
                 }
             }
         });
