@@ -3507,8 +3507,8 @@ Click OK to open Settings, or Cancel to retry later.`;
             showSmartSplitUI(file, fileSizeMB);
             
             try {
-                updateSmartSplitStatus('uploading', `📤 Uploading file to server...`);
-                updatePartProgress(1, 5, 'Uploading...');
+                updateSmartSplitStatus('uploading', `📤 Uploading file to server (0%)...`);
+                updatePartProgress(1, 0, 'Preparing...');
                 updatePartProgress(2, 0, 'Waiting...');
                 updatePartProgress(3, 0, 'Waiting...');
                 
@@ -3518,22 +3518,28 @@ Click OK to open Settings, or Cancel to retry later.`;
                 formData.append('language', language);
                 
                 console.log(`📤 Uploading to ${colabEndpoint}/transcribe-large...`);
+                console.log(`📊 File size: ${fileSizeMB.toFixed(2)} MB`);
                 
-                // Upload to server - this now returns IMMEDIATELY with session_id
-                const response = await fetch(`${colabEndpoint}/transcribe-large`, {
-                    method: 'POST',
-                    body: formData
+                // Use XMLHttpRequest for better upload progress tracking and timeout control
+                const result = await uploadFileWithProgress(formData, `${colabEndpoint}/transcribe-large`, (progressPercent) => {
+                    // Update UI with upload progress
+                    updateSmartSplitStatus('uploading', `📤 Uploading file to server (${progressPercent}%)...`);
+                    updatePartProgress(1, progressPercent, `Uploading ${progressPercent}%`);
+                    console.log(`📤 Upload progress: ${progressPercent}%`);
                 });
                 
-                const result = await response.json();
-                
-                if (!response.ok || !result.success) {
-                    throw new Error(result.error || `Server error: ${response.status}`);
+                if (!result.success) {
+                    throw new Error(result.error || 'Upload failed');
                 }
                 
                 console.log(`✅ Got session_id: ${result.session_id}`);
                 console.log(`📊 Status endpoint: ${result.status_endpoint}`);
-                console.log(`📱 Stored in localStorage for persistence!`);
+                console.log(`📱 File uploaded successfully!`);
+                
+                // Reset progress bars for transcription phase
+                updatePartProgress(1, 0, 'Waiting...');
+                updatePartProgress(2, 0, 'Waiting...');
+                updatePartProgress(3, 0, 'Waiting...');
                 
                 // Start polling for real-time updates from server
                 updateSmartSplitStatus('processing', '🔄 Server is processing in background...');
@@ -3555,6 +3561,62 @@ Click OK to open Settings, or Cancel to retry later.`;
                     document.getElementById('transcribeBtnText').innerHTML = '🚀 Start Transcription';
                 }, 3000);
             }
+        }
+        
+        // Upload file with progress tracking using XMLHttpRequest
+        function uploadFileWithProgress(formData, url, onProgress) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                
+                // Set a long timeout for large files (30 minutes)
+                xhr.timeout = 1800000; // 30 minutes in milliseconds
+                
+                // Track upload progress
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        onProgress(percentComplete);
+                    }
+                });
+                
+                // Handle completion
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const result = JSON.parse(xhr.responseText);
+                            resolve(result);
+                        } catch (e) {
+                            reject(new Error('Invalid server response'));
+                        }
+                    } else {
+                        try {
+                            const result = JSON.parse(xhr.responseText);
+                            reject(new Error(result.error || `Server error: ${xhr.status}`));
+                        } catch (e) {
+                            reject(new Error(`Server error: ${xhr.status}`));
+                        }
+                    }
+                });
+                
+                // Handle network errors
+                xhr.addEventListener('error', () => {
+                    reject(new Error('Network error - please check your connection'));
+                });
+                
+                // Handle timeout
+                xhr.addEventListener('timeout', () => {
+                    reject(new Error('Upload timeout - file is too large or connection is too slow'));
+                });
+                
+                // Handle abort
+                xhr.addEventListener('abort', () => {
+                    reject(new Error('Upload cancelled'));
+                });
+                
+                // Open and send request
+                xhr.open('POST', url, true);
+                xhr.send(formData);
+            });
         }
         
         // REMOVED ALL FFmpeg.wasm functions - using server-side only!
