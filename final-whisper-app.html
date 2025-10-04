@@ -1671,7 +1671,7 @@
                 border-radius: 12px;
                 font-weight: 600;
                 margin: 0 auto;
-                display: inline-block;
+            display: inline-block;
             }
             
             #keepAliveStatus {
@@ -2596,7 +2596,7 @@
                   <div style="display: flex; gap: 12px; align-items: flex-start;">
                       <span style="font-size: 24px;">💡</span>
                       <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
-                          <strong style="color: var(--warning);">Smart Processing:</strong> Using FFmpeg (industry-standard audio tool) to split your file into 3 equal time-based segments. Each part is properly encoded as MP3, transcribed separately, and results are automatically combined. This ensures valid audio files and reliable transcription.
+                          <strong style="color: var(--warning);">Server-Side Processing:</strong> Your file is uploaded to the server where FFmpeg automatically splits it into 3 equal time-based segments. Each part is properly processed and transcribed separately by Whisper AI, then results are combined. This ensures reliable transcription for large files.
                       </div>
                   </div>
               </div>
@@ -3019,129 +3019,75 @@ Click OK to open Settings, or Cancel to retry later.`;
             return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
         }
 
-        // ✨ NEW: Handle Large File Transcription (>100MB) - Split into 3 parts using FFmpeg
-        let ffmpegInstance = null;
-        
-        async function loadFFmpeg() {
-            if (ffmpegInstance) return ffmpegInstance;
-            
-            // Check if running from file:// protocol
-            if (window.location.protocol === 'file:') {
-                throw new Error(
-                    '🚫 FFmpeg.wasm requires a web server!\n\n' +
-                    '❌ Cannot run from file:// protocol\n\n' +
-                    '✅ SOLUTIONS:\n' +
-                    '1. Run local server:\n' +
-                    '   python -m http.server 8080\n' +
-                    '   Then open: http://localhost:8080/final-whisper-app.html\n\n' +
-                    '2. Deploy to GitHub Pages (recommended)\n\n' +
-                    '3. For now: Compress your file manually\n' +
-                    '   (Use Audacity to reduce to <100MB)'
-                );
-            }
-            
-            try {
-                const { FFmpeg } = FFmpegWASM;
-                const { toBlobURL } = FFmpegUtil;
-                
-                ffmpegInstance = new FFmpeg();
-                
-                // Load FFmpeg core
-                const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-                await ffmpegInstance.load({
-                    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-                    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
-                });
-                
-                console.log('✅ FFmpeg loaded successfully');
-                return ffmpegInstance;
-            } catch (error) {
-                console.error('❌ Failed to load FFmpeg:', error);
-                
-                // Provide helpful error message
-                if (error.message.includes('Worker')) {
-                    throw new Error(
-                        '🚫 Web Worker Error!\n\n' +
-                        'FFmpeg.wasm requires:\n' +
-                        '✅ Web server (http:// or https://)\n' +
-                        '✅ Cannot use file:// protocol\n\n' +
-                        'Quick fix: Run python -m http.server 8080'
-                    );
-                }
-                
-                throw new Error('Failed to load audio processing engine: ' + error.message);
-            }
-        }
+        // ✨ Server-Side File Splitting for Large Files (>100MB)
         
         async function handleLargeFileTranscription(file, fileSizeMB) {
-            console.log(`🔪 Large file detected (${fileSizeMB.toFixed(2)} MB) - Splitting with FFmpeg...`);
+            console.log(`🔪 Large file detected (${fileSizeMB.toFixed(2)} MB) - Using SERVER-SIDE splitting...`);
             
             // Show smart split UI
             showSmartSplitUI(file, fileSizeMB);
             
             try {
-                // Load FFmpeg
-                updateSmartSplitStatus('loading', 'Loading audio processing engine...');
-                const ffmpeg = await loadFFmpeg();
+                updateSmartSplitStatus('uploading', '📤 Uploading file to server...');
+                updatePartProgress(1, 5, 'Uploading...');
+                updatePartProgress(2, 0, 'Waiting...');
+                updatePartProgress(3, 0, 'Waiting...');
                 
-                // Get audio duration first
-                updateSmartSplitStatus('analyzing', 'Analyzing audio duration...');
-                const duration = await getAudioDuration(ffmpeg, file);
-                console.log(`📊 Audio duration: ${duration.toFixed(2)} seconds`);
+                // Create FormData
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('language', language);
                 
-                const segmentDuration = duration / 3;
-                console.log(`✂️ Each segment: ${segmentDuration.toFixed(2)} seconds`);
+                console.log(`📤 Uploading to ${colabEndpoint}/transcribe-large...`);
                 
-                updateSmartSplitStatus('splitting', 'Splitting audio into 3 parts...');
+                // Upload to server
+                updatePartProgress(1, 20, 'Server received file...');
+                updateSmartSplitStatus('processing', '🔄 Server is analyzing and splitting...');
                 
-                // Split into 3 parts using FFmpeg (time-based, proper audio files)
-                const parts = await splitAudioWithFFmpeg(ffmpeg, file, duration);
+                const response = await fetch(`${colabEndpoint}/transcribe-large`, {
+                    method: 'POST',
+                    body: formData
+                });
                 
-                console.log(`✅ File split into ${parts.length} valid audio parts:`, 
-                    parts.map(p => `Part ${p.index}: ${p.sizeMB} MB`));
-                updateSmartSplitStatus('split', `Split into 3 parts: ${parts.map(p => p.sizeMB + ' MB').join(', ')}`);
+                // Simulate progress while server works
+                updatePartProgress(1, 40, 'Server splitting part 1...');
+                updatePartProgress(2, 20, 'Server preparing part 2...');
                 
-                // Transcribe each part
-                const transcripts = [];
+                const result = await response.json();
                 
-                for (let i = 0; i < parts.length; i++) {
-                    const part = parts[i];
-                    updatePartProgress(i + 1, 0, 'Uploading...');
-                    
-                    try {
-                        const transcript = await transcribePart(part, i + 1);
-                        transcripts.push(transcript);
-                        updatePartProgress(i + 1, 100, '✅ Complete');
-                        showToast(`Part ${i + 1}/3 transcribed successfully`, 'success');
-                    } catch (error) {
-                        updatePartProgress(i + 1, 0, '❌ Failed');
-                        throw new Error(`Part ${i + 1} failed: ${error.message}`);
-                    }
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || `Server error: ${response.status}`);
                 }
                 
-                // Combine transcripts
-                updateSmartSplitStatus('combining', 'Combining all parts...');
-                const combinedTranscript = transcripts.join(' ');
+                console.log(`✅ Server completed!`);
+                console.log(`   Parts processed: ${result.parts}`);
+                console.log(`   Time: ${result.processing_time}`);
+                console.log(`   Transcript length: ${result.transcript.length} chars`);
+                
+                // Show all parts complete
+                updatePartProgress(1, 100, '✅ Complete');
+                updatePartProgress(2, 100, '✅ Complete');
+                updatePartProgress(3, 100, '✅ Complete');
+                updateSmartSplitStatus('complete', '🎉 Server completed all splitting and transcription!');
                 
                 // Display result
-                displayResult(combinedTranscript, {
+                displayResult(result.transcript, {
                     filename: file.name,
-                    language: language,
-                    parts: parts.length,
-                    total_size: fileSizeMB.toFixed(2) + ' MB',
-                    original_duration: Math.floor(duration) + 's'
+                    language: result.language,
+                    parts: result.parts,
+                    processing_time: result.processing_time,
+                    method: 'server-side-splitting'
                 });
                 
-                saveToHistory(file.name, combinedTranscript, { 
-                    parts: 3, 
+                saveToHistory(file.name, result.transcript, { 
+                    parts: result.parts, 
                     size: fileSizeMB.toFixed(2) + ' MB',
-                    duration: Math.floor(duration) + 's'
+                    time: result.processing_time,
+                    method: 'server-splitting'
                 });
                 
-                updateSmartSplitStatus('complete', '🎉 All parts transcribed and combined!');
-                showToast('Large file transcription complete!', 'success');
+                showToast('✅ Large file transcription complete!', 'success');
                 
-                // Hide split UI after 3 seconds
                 setTimeout(() => {
                     document.getElementById('smartSplitModal').style.display = 'none';
                     document.getElementById('transcribeBtn').disabled = false;
@@ -3149,9 +3095,12 @@ Click OK to open Settings, or Cancel to retry later.`;
                 }, 3000);
                 
             } catch (error) {
-                console.error('Large file transcription error:', error);
-                showToast(error.message, 'error');
+                console.error('❌ Server-side transcription error:', error);
+                showToast('Error: ' + error.message, 'error');
                 updateSmartSplitStatus('error', '❌ ' + error.message);
+                updatePartProgress(1, 0, '❌ Failed');
+                updatePartProgress(2, 0, '❌ Failed');
+                updatePartProgress(3, 0, '❌ Failed');
                 
                 setTimeout(() => {
                     document.getElementById('smartSplitModal').style.display = 'none';
@@ -3161,138 +3110,7 @@ Click OK to open Settings, or Cancel to retry later.`;
             }
         }
         
-        // Get audio duration using FFmpeg
-        async function getAudioDuration(ffmpeg, file) {
-            const inputName = 'input.' + file.name.split('.').pop();
-            
-            // Write file to FFmpeg virtual filesystem
-            const fileData = await file.arrayBuffer();
-            await ffmpeg.writeFile(inputName, new Uint8Array(fileData));
-            
-            // Get duration using ffprobe
-            await ffmpeg.exec(['-i', inputName, '-f', 'null', '-']);
-            
-            // Parse duration from logs (FFmpeg outputs to stderr)
-            // For now, estimate from file size and bitrate
-            // A more accurate method would parse FFmpeg output
-            
-            // Rough estimate: M4A at ~256kbps
-            const estimatedDuration = (file.size / (256 * 1024 / 8));
-            
-            return estimatedDuration;
-        }
-        
-        // Split audio file into 3 parts using FFmpeg (time-based)
-        async function splitAudioWithFFmpeg(ffmpeg, file, duration) {
-            const parts = [];
-            const segmentDuration = duration / 3;
-            const ext = file.name.split('.').pop();
-            const baseName = file.name.split('.').slice(0, -1).join('.');
-            const inputName = 'input.' + ext;
-            
-            // Write input file to FFmpeg filesystem
-            const fileData = await file.arrayBuffer();
-            await ffmpeg.writeFile(inputName, new Uint8Array(fileData));
-            
-            // Split into 3 parts
-            for (let i = 0; i < 3; i++) {
-                const startTime = i * segmentDuration;
-                const outputName = `${baseName}_part${i + 1}.mp3`;
-                
-                console.log(`🔄 Creating part ${i + 1}: ${startTime.toFixed(2)}s to ${(startTime + segmentDuration).toFixed(2)}s`);
-                
-                // Update progress
-                updatePartProgress(i + 1, 30, 'Splitting...');
-                
-                // FFmpeg command to extract segment and convert to MP3 for compatibility
-                await ffmpeg.exec([
-                    '-i', inputName,
-                    '-ss', startTime.toString(),
-                    '-t', segmentDuration.toString(),
-                    '-c:a', 'libmp3lame',
-                    '-b:a', '128k',
-                    '-ac', '1',  // Mono for better compression
-                    outputName
-                ]);
-                
-                // Read the output file
-                const data = await ffmpeg.readFile(outputName);
-                const blob = new Blob([data.buffer], { type: 'audio/mpeg' });
-                const partFile = new File([blob], outputName, { type: 'audio/mpeg' });
-                
-                parts.push({
-                    file: partFile,
-                    index: i + 1,
-                    size: blob.size,
-                    sizeMB: (blob.size / 1024 / 1024).toFixed(2)
-                });
-                
-                updatePartProgress(i + 1, 50, 'Part created');
-                
-                // Clean up
-                await ffmpeg.deleteFile(outputName);
-            }
-            
-            // Clean up input file
-            await ffmpeg.deleteFile(inputName);
-            
-            return parts;
-        }
-
-        // Transcribe a single part
-        async function transcribePart(part, partNumber) {
-            console.log(`📤 Transcribing Part ${partNumber}: ${part.file.name} (${part.sizeMB} MB)`);
-            
-            const formData = new FormData();
-            formData.append('file', part.file);
-            formData.append('language', language);
-            formData.append('quality', qualityMode);
-            
-            updatePartProgress(partNumber, 10, 'Uploading...');
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 900000); // 15 min per part
-            
-            // Simulate progress
-            let progress = 10;
-            const progressInterval = setInterval(() => {
-                if (progress < 70) {
-                    progress += 10;
-                    updatePartProgress(partNumber, progress, 'Processing...');
-                }
-            }, 1000);
-            
-            try {
-                const response = await fetch(`${colabEndpoint}/transcribe`, {
-                    method: 'POST',
-                    body: formData,
-                    signal: controller.signal
-                });
-                
-                clearInterval(progressInterval);
-                clearTimeout(timeoutId);
-                
-                updatePartProgress(partNumber, 90, 'Finalizing...');
-                
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || `Server Error: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    return data.transcript;
-                } else {
-                    throw new Error(data.error || 'Transcription failed');
-                }
-                
-            } catch (error) {
-                clearInterval(progressInterval);
-                clearTimeout(timeoutId);
-                throw error;
-            }
-        }
+        // REMOVED ALL FFmpeg.wasm functions - using server-side only!
 
         // Show Smart Split UI Modal
         function showSmartSplitUI(file, fileSizeMB) {
@@ -3353,30 +3171,29 @@ Click OK to open Settings, or Cancel to retry later.`;
             // ✨ Smart File Splitting for large files (>100MB)
             if (fileSizeMB > 100) {
                 const proceed = confirm(
-                    `🔪 SMART AUDIO SPLITTER DETECTED LARGE FILE\n\n` +
+                    `🔪 SERVER-SIDE SMART SPLITTING FOR LARGE FILE\n\n` +
                     `File: ${selectedFile.name}\n` +
                     `Size: ${fileSizeMB.toFixed(0)} MB\n\n` +
-                    `✨ AUTOMATIC SOLUTION:\n` +
-                    `The app will automatically:\n\n` +
-                    `1️⃣ Split your audio into 3 equal parts (time-based)\n` +
-                    `2️⃣ Convert to optimized MP3 format\n` +
-                    `3️⃣ Transcribe each part separately\n` +
+                    `✨ AUTOMATIC SERVER PROCESSING:\n` +
+                    `The server will automatically:\n\n` +
+                    `1️⃣ Upload your file to the server\n` +
+                    `2️⃣ Split audio into 3 equal parts (time-based)\n` +
+                    `3️⃣ Transcribe each part with Whisper AI\n` +
                     `4️⃣ Combine all transcripts automatically\n\n` +
-                    `⏱️ This will take 2-5 minutes to process\n` +
+                    `⏱️ Estimated time: 10-15 minutes\n` +
                     `📊 You'll see live progress for each part\n\n` +
                     `💡 HOW IT WORKS:\n` +
-                    `• Uses FFmpeg (industry-standard audio tool)\n` +
+                    `• Server uses FFmpeg to split properly\n` +
                     `• Creates valid audio files (not broken)\n` +
                     `• Works with any format (MP3, M4A, MP4, etc.)\n` +
-                    `• Much more reliable than uploading large files\n\n` +
-                    `🚀 Ready to start smart splitting?\n` +
-                    `(You can also compress manually if preferred)`
+                    `• Much more reliable than uploading large files directly\n\n` +
+                    `🚀 Ready to start server-side processing?`
                 );
                 if (!proceed) {
                     return;
                 }
                 
-                // Use smart splitting
+                // Use server-side splitting
                 await handleLargeFileTranscription(selectedFile, fileSizeMB);
                 return;
             }
