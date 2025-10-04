@@ -1449,42 +1449,6 @@
                 font-weight: 700;
             }
 
-            .features-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-            
-            /* Compact feature cards */
-            .feature-card {
-                padding: 20px !important;
-                border-radius: 16px;
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.95));
-                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-                transition: all 0.3s ease;
-            }
-            
-            .feature-card:active {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-            }
-            
-            .feature-icon {
-                font-size: 32px !important;
-                margin-bottom: 12px;
-            }
-            
-            .feature-title {
-                font-size: 18px !important;
-                margin-bottom: 8px;
-                font-weight: 700;
-                color: var(--text-primary);
-            }
-            
-            .feature-desc {
-                font-size: 14px !important;
-                line-height: 1.5;
-                color: var(--text-secondary);
-            }
 
             .btn-grid {
                 grid-template-columns: 1fr;
@@ -1748,14 +1712,6 @@
                 padding: 14px 16px !important;
                 min-height: 50px !important;
             }
-            
-            .feature-title {
-                font-size: 17px !important;
-            }
-            
-            .feature-desc {
-                font-size: 14px !important;
-            }
         }
 
         /* iOS Safe Area Support */
@@ -1790,7 +1746,7 @@
                 display: none;
             }
             
-            /* Simpler solid background for mobile */
+            /* Simpler solid background for mobile - respects dark mode */
             body::before {
                 content: '';
                 position: fixed;
@@ -1800,6 +1756,73 @@
                 bottom: 0;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
                 z-index: -1;
+                transition: background 0.3s ease;
+            }
+            
+            /* Dark mode background for mobile */
+            body.dark-mode::before {
+                background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
+            }
+            
+            /* Dark mode UI adjustments for mobile */
+            body.dark-mode .card {
+                background: rgba(30, 41, 59, 0.95);
+                color: #f1f5f9;
+            }
+            
+            body.dark-mode .card-header {
+                background: rgba(51, 65, 85, 0.6);
+                color: #f1f5f9;
+            }
+            
+            body.dark-mode .upload-zone {
+                background: rgba(51, 65, 85, 0.3);
+                border-color: rgba(99, 102, 241, 0.5);
+                color: #e2e8f0;
+            }
+            
+            body.dark-mode .primary-btn,
+            body.dark-mode .action-btn {
+                background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                color: white;
+            }
+            
+            body.dark-mode .result-text-box {
+                background: rgba(15, 23, 42, 0.8);
+                color: #e2e8f0;
+                border-color: rgba(51, 65, 85, 0.5);
+            }
+            
+            body.dark-mode h1,
+            body.dark-mode .subtitle,
+            body.dark-mode .upload-text {
+                color: #f1f5f9;
+            }
+            
+            body.dark-mode .upload-hint {
+                color: #cbd5e1;
+            }
+            
+            body.dark-mode .top-nav {
+                background: rgba(30, 41, 59, 0.95);
+                border-bottom-color: rgba(51, 65, 85, 0.5);
+            }
+            
+            body.dark-mode .icon-btn {
+                background: rgba(51, 65, 85, 0.8);
+                color: #f1f5f9;
+            }
+            
+            body.dark-mode .modal-content {
+                background: rgba(30, 41, 59, 0.98);
+                color: #f1f5f9;
+            }
+            
+            body.dark-mode .setting-input,
+            body.dark-mode .setting-select {
+                background: rgba(15, 23, 42, 0.6);
+                color: #f1f5f9;
+                border-color: rgba(51, 65, 85, 0.8);
             }
             
             /* Better touch feedback on mobile */
@@ -2243,45 +2266,6 @@
                     </div>
                 </div>
 
-            <!-- Features Section -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-header-icon">✨</span>
-                    <span>Premium Features</span>
-                </div>
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon">🚀</div>
-                        <div class="feature-title">Ultra Fast</div>
-                        <div class="feature-desc">Lightning speed processing with OpenAI Whisper</div>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🎯</div>
-                        <div class="feature-title">99% Accurate</div>
-                        <div class="feature-desc">State-of-the-art AI transcription accuracy</div>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🌐</div>
-                        <div class="feature-title">100+ Languages</div>
-                        <div class="feature-desc">Automatic language detection support</div>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">📱</div>
-                        <div class="feature-title">Mobile First</div>
-                        <div class="feature-desc">Optimized for iOS & Android devices</div>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">⚡</div>
-                        <div class="feature-title">Background Mode</div>
-                        <div class="feature-desc">Process with screen off & multitask</div>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🔒</div>
-                        <div class="feature-title">100% Secure</div>
-                        <div class="feature-desc">Your data privacy is guaranteed</div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
