@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     
     <!-- iOS Specific Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -274,6 +274,9 @@
             position: relative;
             overflow: hidden;
             border: 3px solid rgba(255, 255, 255, 0.3);
+            /* Hardware acceleration for smooth animation */
+            transform: translateZ(0);
+            will-change: transform;
         }
 
         .logo::before {
@@ -396,12 +399,15 @@
             border-radius: 35px;
             padding: 40px;
             box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255, 255, 255, 0.2);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
             border: 2px solid rgba(255, 255, 255, 0.2);
+            /* Hardware acceleration for smooth interactions */
+            transform: translateZ(0);
+            will-change: transform;
         }
 
         .card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-5px) translateZ(0);
             box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4);
         }
 
@@ -815,19 +821,30 @@
             border-radius: 20px;
             font-weight: 800;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                        background 0.2s ease, 
+                        color 0.2s ease, 
+                        box-shadow 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
             font-size: 16px;
+            /* Hardware acceleration */
+            transform: translateZ(0);
+            will-change: transform;
         }
 
         .action-btn:hover {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
-            transform: translateY(-4px);
+            transform: translateY(-4px) translateZ(0);
             box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+        
+        .action-btn:active {
+            transform: translateY(-2px) translateZ(0);
+            transition: transform 0.1s ease;
         }
 
         /* Features Grid */
@@ -1177,73 +1194,369 @@
         }
 
         /* Responsive Design */
+        /* EXTREME MOBILE OPTIMIZATION - Ultra User-Friendly! */
         @media (max-width: 768px) {
+            /* Base text size increase for mobile */
+            body {
+                font-size: 19px;
+                line-height: 1.6;
+            }
+            
             .app-container {
-                padding: 15px;
+                padding: 24px 20px 100px;
+                max-width: 100%;
+            }
+            
+            /* Larger spacing between sections */
+            .app-container > * + * {
+                margin-top: 28px;
             }
 
             .card {
-                padding: 28px;
+                padding: 36px 28px;
                 border-radius: 28px;
+                margin-bottom: 28px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
             }
 
             .upload-zone {
-                padding: 50px 20px;
+                padding: 70px 28px;
+                min-height: 320px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
             }
 
             h1 {
-                font-size: 36px;
+                font-size: 44px;
+                line-height: 1.2;
+                margin-bottom: 20px;
+                font-weight: 900;
             }
 
             .subtitle {
-                font-size: 17px;
+                font-size: 22px;
+                line-height: 1.6;
+                margin-bottom: 20px;
             }
 
             .logo {
-                width: 100px;
-                height: 100px;
-                font-size: 55px;
+                width: 120px;
+                height: 120px;
+                font-size: 64px;
+                margin-bottom: 24px;
+            }
+            
+            .upload-text {
+                font-size: 26px;
+                margin-bottom: 16px;
+                font-weight: 700;
+            }
+            
+            .upload-hint {
+                font-size: 19px;
+                line-height: 1.5;
+                opacity: 0.95;
+            }
+
+            /* Make buttons MUCH bigger and easier to tap */
+            .primary-btn, .action-btn {
+                padding: 20px 36px;
+                font-size: 21px;
+                min-height: 62px;
+                border-radius: 18px;
+                font-weight: 800;
+                letter-spacing: 0.3px;
+            }
+            
+            .primary-btn span, .action-btn span {
+                font-size: 26px;
+            }
+            
+            .icon-btn {
+                min-width: 58px;
+                min-height: 58px;
+                font-size: 26px;
+                border-radius: 16px;
+            }
+            
+            /* Top nav sticky on mobile for easy access */
+            .top-nav {
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(20px);
+                padding: 16px 20px;
+                margin: -24px -20px 24px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            }
+            
+            /* Card headers bigger */
+            .card-header {
+                font-size: 28px;
+                padding: 24px 28px;
+                margin: -36px -28px 28px;
+                background: rgba(102, 126, 234, 0.08);
+                border-radius: 28px 28px 0 0;
+                font-weight: 900;
+            }
+            
+            .card-header-icon {
+                font-size: 32px;
             }
 
             .action-grid {
                 grid-template-columns: 1fr;
+                gap: 18px;
             }
 
             .modal-content {
-                padding: 35px;
-                margin: 30px auto;
+                padding: 44px 32px;
+                margin: 20px 12px;
+                max-width: calc(100% - 24px);
+                border-radius: 28px;
+            }
+            
+            .modal-title {
+                font-size: 30px;
+                margin-bottom: 20px;
+                font-weight: 900;
+            }
+            
+            .modal-text {
+                font-size: 20px;
+                line-height: 1.7;
+                margin-bottom: 16px;
+            }
+            
+            .modal button {
+                min-height: 58px;
+                font-size: 20px;
+                padding: 18px 32px;
+                margin-top: 12px;
             }
 
             .features-grid {
                 grid-template-columns: 1fr;
+                gap: 24px;
+            }
+            
+            .feature-card {
+                padding: 28px;
+                border-radius: 20px;
+            }
+            
+            .feature-icon {
+                font-size: 48px;
+                margin-bottom: 16px;
+            }
+            
+            .feature-title {
+                font-size: 24px;
+                margin-bottom: 12px;
+                font-weight: 800;
+            }
+            
+            .feature-desc {
+                font-size: 18px;
+                line-height: 1.6;
             }
 
             .btn-grid {
                 grid-template-columns: 1fr;
+                gap: 18px;
             }
 
             .result-text-box {
-                padding: 22px;
+                padding: 28px;
+                font-size: 19px;
+                line-height: 1.8;
+                border-radius: 20px;
+                max-height: 60vh;
+                overflow-y: auto;
+            }
+            
+            /* Settings form elements - MUCH bigger for easy use */
+            .setting-group {
+                margin-bottom: 24px;
+            }
+            
+            .setting-group label {
+                font-size: 20px;
+                margin-bottom: 12px;
+                font-weight: 700;
+                display: block;
+            }
+            
+            .setting-input, .setting-select {
+                padding: 18px 20px;
+                font-size: 19px;
+                min-height: 58px;
+                border-radius: 16px;
+                border-width: 3px;
+            }
+            
+            /* File info bigger and more prominent */
+            .file-info {
+                padding: 24px;
+                border-radius: 20px;
+                margin: 20px 0;
+            }
+            
+            .file-info-item {
+                font-size: 19px;
+                padding: 14px 16px;
+                margin: 8px 0;
+                border-radius: 12px;
+            }
+            
+            .file-name {
+                font-size: 20px;
+                font-weight: 800;
+                margin-bottom: 16px;
+            }
+            
+            /* Progress UI bigger */
+            .progress-wrapper {
+                padding: 28px;
+                border-radius: 20px;
+                margin: 24px 0;
+            }
+            
+            .progress-text {
+                font-size: 20px;
+                margin-bottom: 16px;
+                font-weight: 700;
+            }
+            
+            .progress-bar {
+                height: 16px;
+                border-radius: 12px;
+            }
+            
+            /* Result metadata bigger */
+            .result-meta {
+                font-size: 18px;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+            
+            .meta-badge {
+                padding: 10px 18px;
+                font-size: 17px;
+                border-radius: 14px;
+                font-weight: 700;
+            }
+            
+            /* Toast notifications bigger on mobile */
+            .toast {
+                padding: 20px 28px;
+                font-size: 19px;
+                border-radius: 18px;
+                max-width: calc(100vw - 40px);
+                bottom: 24px;
+            }
+            
+            /* Pills bigger */
+            .pill {
+                padding: 12px 24px;
+                font-size: 17px;
+                border-radius: 20px;
+            }
+            
+            /* File selected zone bigger */
+            .file-selected {
+                padding: 28px;
+                border-radius: 20px;
             }
         }
 
         @media (max-width: 480px) {
+            /* Extra small phones - MAXIMUM readability! */
+            body {
+                font-size: 18px;
+                line-height: 1.7;
+            }
+            
+            .app-container {
+                padding: 20px 16px 80px;
+            }
+            
             h1 {
-                font-size: 28px;
+                font-size: 38px;
+                line-height: 1.2;
+            }
+            
+            .subtitle {
+                font-size: 20px;
+                line-height: 1.6;
             }
 
             .upload-text {
-                font-size: 22px;
+                font-size: 24px;
+            }
+            
+            .upload-hint {
+                font-size: 18px;
             }
 
+            .card {
+                padding: 32px 24px;
+                border-radius: 24px;
+            }
+            
             .card-header {
-                font-size: 22px;
+                font-size: 26px;
+                padding: 20px 24px;
+                margin: -32px -24px 24px;
             }
 
-            .icon-btn {
-                min-width: 48px;
-                min-height: 48px;
+            .primary-btn, .action-btn {
+                padding: 18px 32px;
                 font-size: 20px;
+                min-height: 60px;
+                font-weight: 800;
+            }
+            
+            .icon-btn {
+                min-width: 56px;
+                min-height: 56px;
+                font-size: 24px;
+            }
+            
+            .modal-content {
+                padding: 40px 28px;
+                margin: 16px 8px;
+                border-radius: 24px;
+            }
+            
+            .modal-title {
+                font-size: 28px;
+            }
+            
+            .modal-text {
+                font-size: 19px;
+            }
+            
+            .result-text-box {
+                font-size: 18px;
+                padding: 24px;
+                line-height: 1.8;
+            }
+            
+            .setting-input, .setting-select {
+                font-size: 18px;
+                padding: 16px 18px;
+                min-height: 56px;
+            }
+            
+            .feature-title {
+                font-size: 22px;
+            }
+            
+            .feature-desc {
+                font-size: 17px;
             }
         }
 
@@ -1270,6 +1583,79 @@
         @media screen and (max-width: 768px) {
             body {
                 position: relative;
+            }
+            
+            /* Better touch feedback on mobile */
+            button:active, .action-btn:active, .primary-btn:active {
+                transform: scale(0.97) translateZ(0);
+                opacity: 0.9;
+            }
+            
+            /* Smoother scrolling on mobile */
+            .result-text-box, .modal-content, .upload-zone {
+                -webkit-overflow-scrolling: touch;
+                scroll-behavior: smooth;
+            }
+            
+            /* Prevent text selection on buttons for better UX */
+            button, .action-btn, .primary-btn, .icon-btn {
+                -webkit-user-select: none;
+                user-select: none;
+                -webkit-tap-highlight-color: transparent;
+            }
+            
+            /* Better focus states for accessibility */
+            button:focus, .action-btn:focus, .primary-btn:focus {
+                outline: 3px solid rgba(99, 102, 241, 0.5);
+                outline-offset: 3px;
+            }
+            
+            /* Larger click area for small icons */
+            .icon-btn {
+                position: relative;
+            }
+            
+            .icon-btn::after {
+                content: '';
+                position: absolute;
+                top: -8px;
+                left: -8px;
+                right: -8px;
+                bottom: -8px;
+            }
+            
+            /* Better card tap feedback */
+            .card:active {
+                transform: scale(0.99);
+            }
+            
+            /* Optimize animations for mobile */
+            @media (prefers-reduced-motion: reduce) {
+                * {
+                    animation-duration: 0.01ms !important;
+                    animation-iteration-count: 1 !important;
+                    transition-duration: 0.01ms !important;
+                }
+            }
+            
+            /* Better input focus on mobile */
+            input:focus, select:focus, textarea:focus {
+                border-color: var(--primary);
+                outline: none;
+                box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+            }
+            
+            /* Sticky footer for mobile navigation */
+            .mobile-footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: rgba(255, 255, 255, 0.98);
+                backdrop-filter: blur(20px);
+                padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+                z-index: 90;
             }
         }
     </style>
@@ -1457,18 +1843,6 @@
                             </button>
                         </div>
                         
-                        <!-- Visual Transformation Buttons -->
-                        <div class="action-grid" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(99, 102, 241, 0.2);">
-                            <button class="action-btn" onclick="generatePresentation()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
-                                <span>📊</span> Create Slides
-                            </button>
-                            <button class="action-btn" onclick="generateMindMap()" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
-                                <span>🧠</span> Mind Map
-                            </button>
-                            <button class="action-btn" onclick="generateFlashcards()" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
-                                <span>📇</span> Flashcards
-                            </button>
-                        </div>
                     </div>
                 </div>
 
