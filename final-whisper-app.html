@@ -3023,7 +3023,7 @@ Click OK to open Settings, or Cancel to retry later.`;
         
         // 📊 Polling system for background transcription with session persistence
         let pollingInterval = null;
-        let currentSessionId = null;
+        // Note: currentSessionId already declared in global variables section
 
         async function startProgressPolling(sessionId) {
             console.log(`📊 Starting polling for session: ${sessionId}`);
