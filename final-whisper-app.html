@@ -4353,133 +4353,225 @@ Click OK to open Settings, or Cancel to retry later.`;
                 return;
             }
             
-            showToast('📄 Generating beautifully styled PDF... This may take 10-30 seconds', 'info');
+            showToast('📄 Generating PDF... Please wait 10-20 seconds', 'info');
             
             try {
-                // Get the formatted lecture notes HTML content
-                const lectureNotesBox = document.getElementById('lectureNotesBox');
-                const lectureContent = lectureNotesBox.querySelector('.lecture-notes-content');
+                console.log('🔍 Starting PDF generation process...');
                 
-                if (!lectureContent) {
-                    throw new Error('No lecture content found');
+                // Get the lecture notes box
+                const lectureNotesBox = document.getElementById('lectureNotesBox');
+                console.log('📦 Lecture notes box found:', !!lectureNotesBox);
+                
+                if (!lectureNotesBox) {
+                    throw new Error('Lecture notes box not found');
                 }
                 
-                // Clone the content for PDF
-                const clonedContent = lectureContent.cloneNode(true);
+                // Get the actual content
+                let contentToExport = lectureNotesBox.innerHTML;
+                console.log('📝 Content length:', contentToExport.length, 'characters');
                 
-                // Create temporary container with PDF styling
+                if (contentToExport.length < 100) {
+                    throw new Error('Lecture notes appear to be empty. Please generate notes first.');
+                }
+                
+                // Create temporary container for PDF rendering
                 const pdfContainer = document.createElement('div');
+                pdfContainer.id = 'pdf-export-container';
                 pdfContainer.style.cssText = `
-                    position: fixed;
-                    left: -10000px;
+                    position: absolute;
+                    left: -9999px;
                     top: 0;
-                    width: 190mm;
-                    padding: 15mm;
+                    width: 800px;
+                    padding: 40px;
                     background: white;
-                    font-family: 'Helvetica', 'Arial', sans-serif;
-                    color: #1f2937;
-                    line-height: 1.6;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
                 `;
                 
-                // Apply comprehensive PDF styling to cloned content
-                clonedContent.style.cssText = `
-                    width: 100%;
-                    max-width: 100%;
-                    font-size: 11pt;
-                    line-height: 1.7;
-                    color: #1f2937;
-                `;
-                
-                // Style all elements for PDF
-                clonedContent.querySelectorAll('h1').forEach(el => {
-                    el.style.cssText = 'font-size: 22pt; font-weight: 800; color: #1e40af; margin: 18px 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #3b82f6; page-break-after: avoid;';
-                });
-                
-                clonedContent.querySelectorAll('h2').forEach(el => {
-                    el.style.cssText = 'font-size: 18pt; font-weight: 700; color: #1e3a8a; margin: 14px 0 10px 0; padding-left: 8px; border-left: 4px solid #3b82f6; page-break-after: avoid;';
-                });
-                
-                clonedContent.querySelectorAll('h3').forEach(el => {
-                    el.style.cssText = 'font-size: 14pt; font-weight: 600; color: #1e40af; margin: 12px 0 8px 0; page-break-after: avoid;';
-                });
-                
-                clonedContent.querySelectorAll('h4').forEach(el => {
-                    el.style.cssText = 'font-size: 12pt; font-weight: 600; color: #2563eb; margin: 10px 0 6px 0; page-break-after: avoid;';
-                });
-                
-                clonedContent.querySelectorAll('p').forEach(el => {
-                    el.style.cssText = 'margin: 6px 0; line-height: 1.7; text-align: justify; font-size: 11pt; color: #1f2937;';
-                });
-                
-                clonedContent.querySelectorAll('ul, ol').forEach(el => {
-                    el.style.cssText = 'margin: 8px 0; padding-left: 20px; page-break-inside: avoid;';
-                });
-                
-                clonedContent.querySelectorAll('li').forEach(el => {
-                    el.style.cssText = 'margin: 5px 0; line-height: 1.6; font-size: 11pt; color: #1f2937;';
-                });
-                
-                clonedContent.querySelectorAll('strong').forEach(el => {
-                    el.style.cssText = 'font-weight: 700; color: #1e40af;';
-                });
-                
-                clonedContent.querySelectorAll('em').forEach(el => {
-                    el.style.cssText = 'font-style: italic; color: #2563eb;';
-                });
-                
-                clonedContent.querySelectorAll('code').forEach(el => {
-                    el.style.cssText = 'background: #f3f4f6; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 10pt; color: #dc2626;';
-                });
-                
-                clonedContent.querySelectorAll('.quiz-section').forEach(el => {
-                    el.style.cssText = 'background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 12px; margin: 12px 0; page-break-inside: avoid;';
-                });
-                
-                clonedContent.querySelectorAll('.quiz-question').forEach(el => {
-                    el.style.cssText = 'background: white; border-left: 3px solid #3b82f6; padding: 10px; margin: 8px 0; border-radius: 4px; page-break-inside: avoid;';
-                });
-                
-                clonedContent.querySelectorAll('.quiz-question-number').forEach(el => {
-                    el.style.cssText = 'font-size: 12pt; font-weight: 700; color: #3b82f6; margin-bottom: 6px;';
-                });
-                
-                clonedContent.querySelectorAll('.quiz-option').forEach(el => {
-                    el.style.cssText = 'padding: 6px 10px; margin: 5px 0; background: #f9fafb; border-radius: 4px; font-size: 10pt;';
-                });
-                
-                clonedContent.querySelectorAll('.quiz-answer').forEach(el => {
-                    el.style.cssText = 'background: #ecfdf5; border: 2px solid #10b981; padding: 8px; margin: 8px 0; border-radius: 4px; font-weight: 600; color: #065f46; font-size: 10pt;';
-                });
-                
-                clonedContent.querySelectorAll('hr').forEach(el => {
-                    el.style.cssText = 'border: none; height: 1px; background: #cbd5e1; margin: 15px 0;';
-                });
-                
-                clonedContent.querySelectorAll('blockquote').forEach(el => {
-                    el.style.cssText = 'border-left: 4px solid #fbbf24; background: #fef3c7; padding: 10px 12px; margin: 10px 0; border-radius: 4px; font-style: italic; color: #78350f;';
-                });
-                
-                pdfContainer.appendChild(clonedContent);
+                pdfContainer.innerHTML = contentToExport;
                 document.body.appendChild(pdfContainer);
                 
-                console.log('📄 Starting PDF generation...');
+                console.log('📦 PDF container created and added to DOM');
                 
-                // Use html2canvas to capture the styled content
+                // Apply comprehensive styling to PDF content
+                const applyPDFStyling = (container) => {
+                    // Base container styling
+                    container.style.color = '#1f2937';
+                    container.style.fontSize = '14px';
+                    container.style.lineHeight = '1.7';
+                    
+                    // Find and style lecture-notes-content div
+                    const lectureContent = container.querySelector('.lecture-notes-content') || container;
+                    
+                    // H1 styling
+                    lectureContent.querySelectorAll('h1').forEach(el => {
+                        el.style.fontSize = '28px';
+                        el.style.fontWeight = '800';
+                        el.style.color = '#1e40af';
+                        el.style.margin = '24px 0 16px 0';
+                        el.style.paddingBottom = '12px';
+                        el.style.borderBottom = '3px solid #3b82f6';
+                    });
+                    
+                    // H2 styling
+                    lectureContent.querySelectorAll('h2').forEach(el => {
+                        el.style.fontSize = '22px';
+                        el.style.fontWeight = '700';
+                        el.style.color = '#1e3a8a';
+                        el.style.margin = '20px 0 12px 0';
+                        el.style.paddingLeft = '12px';
+                        el.style.borderLeft = '5px solid #3b82f6';
+                    });
+                    
+                    // H3 styling
+                    lectureContent.querySelectorAll('h3').forEach(el => {
+                        el.style.fontSize = '18px';
+                        el.style.fontWeight = '600';
+                        el.style.color = '#1e40af';
+                        el.style.margin = '16px 0 10px 0';
+                    });
+                    
+                    // H4 styling
+                    lectureContent.querySelectorAll('h4').forEach(el => {
+                        el.style.fontSize = '16px';
+                        el.style.fontWeight = '600';
+                        el.style.color = '#2563eb';
+                        el.style.margin = '14px 0 8px 0';
+                    });
+                    
+                    // Paragraph styling
+                    lectureContent.querySelectorAll('p').forEach(el => {
+                        el.style.margin = '10px 0';
+                        el.style.lineHeight = '1.7';
+                        el.style.textAlign = 'justify';
+                        el.style.color = '#1f2937';
+                    });
+                    
+                    // List styling
+                    lectureContent.querySelectorAll('ul, ol').forEach(el => {
+                        el.style.margin = '12px 0';
+                        el.style.paddingLeft = '24px';
+                    });
+                    
+                    lectureContent.querySelectorAll('li').forEach(el => {
+                        el.style.margin = '8px 0';
+                        el.style.lineHeight = '1.6';
+                        el.style.color = '#1f2937';
+                    });
+                    
+                    // Strong and em
+                    lectureContent.querySelectorAll('strong').forEach(el => {
+                        el.style.fontWeight = '700';
+                        el.style.color = '#1e40af';
+                    });
+                    
+                    lectureContent.querySelectorAll('em').forEach(el => {
+                        el.style.fontStyle = 'italic';
+                        el.style.color = '#2563eb';
+                    });
+                    
+                    // Code styling
+                    lectureContent.querySelectorAll('code').forEach(el => {
+                        el.style.background = '#f3f4f6';
+                        el.style.padding = '2px 6px';
+                        el.style.borderRadius = '4px';
+                        el.style.fontFamily = 'monospace';
+                        el.style.fontSize = '13px';
+                        el.style.color = '#dc2626';
+                    });
+                    
+                    // Quiz sections
+                    lectureContent.querySelectorAll('.quiz-section').forEach(el => {
+                        el.style.background = '#f0fdf4';
+                        el.style.border = '2px solid #10b981';
+                        el.style.borderRadius = '12px';
+                        el.style.padding = '16px';
+                        el.style.margin = '16px 0';
+                    });
+                    
+                    lectureContent.querySelectorAll('.quiz-question').forEach(el => {
+                        el.style.background = 'white';
+                        el.style.borderLeft = '4px solid #3b82f6';
+                        el.style.padding = '12px';
+                        el.style.margin = '12px 0';
+                        el.style.borderRadius = '8px';
+                    });
+                    
+                    lectureContent.querySelectorAll('.quiz-question-number').forEach(el => {
+                        el.style.fontSize = '16px';
+                        el.style.fontWeight = '700';
+                        el.style.color = '#3b82f6';
+                        el.style.marginBottom = '8px';
+                    });
+                    
+                    lectureContent.querySelectorAll('.quiz-option').forEach(el => {
+                        el.style.padding = '8px 12px';
+                        el.style.margin = '6px 0';
+                        el.style.background = '#f9fafb';
+                        el.style.borderRadius = '6px';
+                        el.style.border = '1px solid #e5e7eb';
+                    });
+                    
+                    lectureContent.querySelectorAll('.quiz-answer').forEach(el => {
+                        el.style.background = '#ecfdf5';
+                        el.style.border = '2px solid #10b981';
+                        el.style.padding = '12px';
+                        el.style.margin = '10px 0';
+                        el.style.borderRadius = '8px';
+                        el.style.fontWeight = '600';
+                        el.style.color = '#065f46';
+                    });
+                    
+                    // HR
+                    lectureContent.querySelectorAll('hr').forEach(el => {
+                        el.style.border = 'none';
+                        el.style.height = '2px';
+                        el.style.background = '#e5e7eb';
+                        el.style.margin = '20px 0';
+                    });
+                    
+                    // Blockquote
+                    lectureContent.querySelectorAll('blockquote').forEach(el => {
+                        el.style.borderLeft = '5px solid #fbbf24';
+                        el.style.background = '#fef3c7';
+                        el.style.padding = '12px 16px';
+                        el.style.margin = '12px 0';
+                        el.style.borderRadius = '6px';
+                        el.style.fontStyle = 'italic';
+                        el.style.color = '#78350f';
+                    });
+                };
+                
+                applyPDFStyling(pdfContainer);
+                console.log('✅ PDF styling applied');
+                
+                // Wait a moment for rendering
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                console.log('📸 Starting html2canvas capture...');
+                
+                // Capture with html2canvas
                 const canvas = await html2canvas(pdfContainer, {
-                    scale: 2, // Higher quality
+                    scale: 2,
                     useCORS: true,
-                    logging: false,
+                    allowTaint: true,
+                    logging: true,
                     backgroundColor: '#ffffff',
-                    windowWidth: pdfContainer.scrollWidth,
-                    windowHeight: pdfContainer.scrollHeight
+                    width: pdfContainer.scrollWidth,
+                    height: pdfContainer.scrollHeight
                 });
                 
-                console.log('✅ Canvas generated:', canvas.width, 'x', canvas.height);
+                console.log('✅ Canvas captured:', canvas.width, 'x', canvas.height);
                 
-                // Remove temporary container
+                // Remove temp container
                 document.body.removeChild(pdfContainer);
+                console.log('🧹 Temp container removed');
                 
-                // Create PDF
+                // Check if canvas is empty
+                if (canvas.width === 0 || canvas.height === 0) {
+                    throw new Error('Canvas rendering failed - empty canvas');
+                }
+                
+                // Create PDF with jsPDF
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF({
                     orientation: 'portrait',
@@ -4489,53 +4581,60 @@ Click OK to open Settings, or Cancel to retry later.`;
                 });
                 
                 // Calculate dimensions
-                const pdfWidth = 210; // A4 width in mm
-                const pdfHeight = 297; // A4 height in mm
+                const pdfWidth = 210; // A4 width
+                const pdfHeight = 297; // A4 height
                 const imgWidth = pdfWidth;
                 const imgHeight = (canvas.height * pdfWidth) / canvas.width;
                 
-                console.log('📐 PDF dimensions:', imgWidth, 'x', imgHeight);
+                console.log('📐 PDF dimensions:', imgWidth, 'mm x', imgHeight, 'mm');
                 
-                // Convert canvas to image
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                // Convert to image
+                const imgData = canvas.toDataURL('image/jpeg', 0.92);
                 
                 // Add pages
                 let heightLeft = imgHeight;
                 let position = 0;
+                let pageCount = 0;
                 
                 // First page
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                pageCount++;
                 heightLeft -= pdfHeight;
                 
-                // Add remaining pages
+                // Additional pages
                 while (heightLeft > 0) {
                     position = heightLeft - imgHeight;
                     pdf.addPage();
-                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                    pageCount++;
                     heightLeft -= pdfHeight;
                 }
                 
-                console.log('📄 Total pages:', pdf.internal.pages.length - 1);
-                
-                // Generate filename
-                const filename = selectedFile 
-                    ? `${selectedFile.name.replace(/\.[^/.]+$/, '')}-lecture-notes.pdf`
-                    : `lecture-notes-${new Date().toISOString().slice(0,10)}.pdf`;
+                console.log('📄 Total pages:', pageCount);
                 
                 // Save PDF
+                const filename = selectedFile 
+                    ? `${selectedFile.name.replace(/\.[^/.]+$/, '')}-lecture-notes.pdf`
+                    : `lecture-notes-${Date.now()}.pdf`;
+                
                 pdf.save(filename);
                 
                 console.log('✅ PDF saved:', filename);
-                showToast(`✅ PDF downloaded successfully! (${pdf.internal.pages.length - 1} pages)`, 'success');
+                showToast(`✅ PDF downloaded! (${pageCount} pages)`, 'success');
                 
             } catch (error) {
                 console.error('❌ PDF generation error:', error);
-                showToast('❌ Failed to generate PDF: ' + error.message, 'error');
+                console.error('Error stack:', error.stack);
+                showToast('❌ PDF generation failed: ' + error.message, 'error');
                 
                 // Cleanup
-                const pdfContainer = document.querySelector('div[style*="left: -10000px"]');
-                if (pdfContainer && pdfContainer.parentNode) {
-                    pdfContainer.parentNode.removeChild(pdfContainer);
+                const tempContainer = document.getElementById('pdf-export-container');
+                if (tempContainer) {
+                    try {
+                        document.body.removeChild(tempContainer);
+                    } catch (e) {
+                        console.error('Cleanup error:', e);
+                    }
                 }
             }
         }
