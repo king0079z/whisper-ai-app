@@ -4460,23 +4460,28 @@ Click OK to open Settings, or Cancel to retry later.`;
                 const pdfContainer = document.createElement('div');
                 pdfContainer.id = 'pdf-export-container';
                 
-                // A4 size: 210mm x 297mm at 96 DPI = ~794px x ~1123px
-                // With margins: 25mm (~95px) on each side = content width ~600px
+                // A4 proportions with proper content width
                 pdfContainer.style.cssText = `
                     position: absolute;
                     left: -9999px;
                     top: 0;
-                    width: 794px;
-                    min-height: 1123px;
-                    padding: 60px 80px;
+                    width: 800px;
+                    min-height: 1000px;
+                    padding: 50px 70px;
                     margin: 0;
                     background: white;
-                    font-family: 'Georgia', 'Times New Roman', serif;
+                    color: #000000;
+                    font-family: Georgia, 'Times New Roman', serif;
+                    font-size: 11pt;
+                    line-height: 1.6;
                     box-sizing: border-box;
                 `;
                 
                 pdfContainer.innerHTML = contentToExport;
                 document.body.appendChild(pdfContainer);
+                
+                console.log('📦 Container innerHTML length:', pdfContainer.innerHTML.length);
+                console.log('📦 Container text content length:', pdfContainer.textContent.length);
                 
                 console.log('📦 PDF container created and added to DOM');
                 console.log('📦 Container has children:', pdfContainer.children.length);
@@ -4485,19 +4490,18 @@ Click OK to open Settings, or Cancel to retry later.`;
                 const applyPDFStyling = (container) => {
                     console.log('🎨 Applying professional PDF styling...');
                     
-                    // Base container styling - readable document font size
-                    container.style.color = '#000000';
-                    container.style.fontSize = '11pt';
-                    container.style.lineHeight = '1.6';
-                    container.style.textRendering = 'optimizeLegibility';
-                    container.style.webkitFontSmoothing = 'antialiased';
-                    
-                    // Find the lecture-notes-content div (created by formatLectureNotes)
-                    const lectureContent = container.querySelector('.lecture-notes-content');
-                    const targetElement = lectureContent || container;
-                    
-                    console.log('🎯 Target element for styling:', !!lectureContent ? '.lecture-notes-content found' : 'Using container directly');
-                    console.log('🎯 Target element children:', targetElement.children.length);
+                    try {
+                        // Find the lecture-notes-content div (created by formatLectureNotes)
+                        const lectureContent = container.querySelector('.lecture-notes-content');
+                        const targetElement = lectureContent || container;
+                        
+                        console.log('🎯 Target element for styling:', !!lectureContent ? '.lecture-notes-content found' : 'Using container directly');
+                        console.log('🎯 Target element children:', targetElement.children.length);
+                        
+                        if (targetElement.children.length === 0) {
+                            console.warn('⚠️ No children found in target element!');
+                            return;
+                        }
                     
                     // H1 styling - Main title (18pt, bold, with bottom border)
                     targetElement.querySelectorAll('h1').forEach((el, index) => {
@@ -4670,6 +4674,13 @@ Click OK to open Settings, or Cancel to retry later.`;
                         el.style.color = '#92400e';
                         el.style.pageBreakInside = 'avoid';
                     });
+                    
+                    console.log('✅ All styles applied successfully');
+                    
+                    } catch (error) {
+                        console.error('❌ Error applying PDF styles:', error);
+                        console.error('Error details:', error.message);
+                    }
                 };
                 
                 applyPDFStyling(pdfContainer);
@@ -4680,22 +4691,21 @@ Click OK to open Settings, or Cancel to retry later.`;
                 
                 console.log('📸 Starting html2canvas capture...');
                 
-                // Capture with html2canvas at high quality
+                // Capture with html2canvas
+                console.log('📏 Container dimensions:', pdfContainer.scrollWidth, 'x', pdfContainer.scrollHeight);
+                
                 const canvas = await html2canvas(pdfContainer, {
-                    scale: 2.5,  // Higher quality for text clarity
+                    scale: 2,
                     useCORS: true,
                     allowTaint: true,
-                    logging: false,
+                    logging: true,
                     backgroundColor: '#ffffff',
                     width: pdfContainer.scrollWidth,
-                    height: pdfContainer.scrollHeight,
-                    windowWidth: pdfContainer.scrollWidth,
-                    windowHeight: pdfContainer.scrollHeight,
-                    imageTimeout: 15000,
-                    removeContainer: false
+                    height: pdfContainer.scrollHeight
                 });
                 
                 console.log('✅ Canvas captured:', canvas.width, 'x', canvas.height);
+                console.log('✅ Canvas area:', (canvas.width * canvas.height), 'pixels');
                 
                 // Remove temp container
                 document.body.removeChild(pdfContainer);
@@ -4726,7 +4736,8 @@ Click OK to open Settings, or Cancel to retry later.`;
                 console.log('📐 Canvas dimensions:', canvas.width, 'x', canvas.height, 'px');
                 
                 // Convert to high-quality image
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                const imgData = canvas.toDataURL('image/jpeg', 0.92);
+                console.log('📸 Image data URL length:', imgData.length);
                 
                 // Add pages with content
                 let heightLeft = imgHeight;
